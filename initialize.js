@@ -129,17 +129,12 @@ function(instance, context) {
       background: #e31e2480;
     }
 
-    .planningHebdo-${instanceId} .ph-rows.ph-scroll .ph-row {
-      flex: none;
-      height: 60px;
-    }
-
     .planningHebdo-${instanceId} .ph-row {
       display: flex;
       align-items: stretch;
       border-bottom: 1px solid #F1F5F9;
-      flex: 1;
-      min-height: 60px;
+      flex: none;
+      min-height: 48px;
     }
 
     .planningHebdo-${instanceId} .ph-row:last-child {
@@ -294,6 +289,73 @@ function(instance, context) {
       color: #F59E0B;
       background: #FFFBEB;
       border: 1px solid #F59E0B22;
+    }
+
+    .planningHebdo-${instanceId} .ph-res-tag:active {
+      cursor: grabbing;
+    }
+
+    .planningHebdo-${instanceId} .ph-res-tag.ph-dragging {
+      opacity: 0.35;
+    }
+
+    /* --- Drag over highlights --- */
+    .planningHebdo-${instanceId} .ph-drop-zone.ph-drag-over {
+      outline: 2px dashed;
+      outline-offset: -2px;
+    }
+
+    .planningHebdo-${instanceId} .ph-drop-zone.zone-personnel.ph-drag-over {
+      outline-color: #3B82F6;
+      background: #EFF6FFAA;
+    }
+
+    .planningHebdo-${instanceId} .ph-drop-zone.zone-vehicule.ph-drag-over {
+      outline-color: #10B981;
+      background: #ECFDF5AA;
+    }
+
+    .planningHebdo-${instanceId} .ph-drop-zone.zone-soustraitant.ph-drag-over {
+      outline-color: #F59E0B;
+      background: #FFFBEBAA;
+    }
+
+    .planningHebdo-${instanceId} .ph-res-pool.ph-drag-over {
+      outline: 2px dashed;
+      outline-offset: -2px;
+    }
+
+    .planningHebdo-${instanceId} .ph-res-pool.pool-personnel.ph-drag-over {
+      outline-color: #3B82F6;
+    }
+
+    .planningHebdo-${instanceId} .ph-res-pool.pool-vehicule.ph-drag-over {
+      outline-color: #10B981;
+    }
+
+    .planningHebdo-${instanceId} .ph-res-pool.pool-soustraitant.ph-drag-over {
+      outline-color: #F59E0B;
+    }
+
+    /* --- Remove button (X) --- */
+    .planningHebdo-${instanceId} .ph-tag-remove {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      margin-left: 4px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 9px;
+      line-height: 1;
+      opacity: 0.5;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    .planningHebdo-${instanceId} .ph-tag-remove:hover {
+      opacity: 1;
+      background: rgba(0,0,0,0.08);
     }
   `;
   document.head.appendChild(style);
@@ -459,12 +521,210 @@ function(instance, context) {
   };
 
   // --- Helper: create a resource tag ---
-  instance.data.createTag = function(name, type) {
+  instance.data.createTag = function(name, type, removable) {
     var tag = document.createElement('span');
     tag.className = 'ph-res-tag tag-' + type;
+    tag.setAttribute('draggable', 'true');
     tag.textContent = name;
+    if (removable) {
+      var btn = document.createElement('span');
+      btn.className = 'ph-tag-remove';
+      btn.textContent = '\u2715';
+      tag.appendChild(btn);
+    }
     return tag;
   };
+
+  // --- Helper: get tag type from class ---
+  function getTagType(el) {
+    if (el.classList.contains('tag-personnel')) return 'personnel';
+    if (el.classList.contains('tag-vehicule')) return 'vehicule';
+    if (el.classList.contains('tag-soustraitant')) return 'soustraitant';
+    return null;
+  }
+
+  // --- Helper: get zone type from class ---
+  function getZoneType(el) {
+    if (el.classList.contains('zone-personnel') || el.classList.contains('pool-personnel')) return 'personnel';
+    if (el.classList.contains('zone-vehicule') || el.classList.contains('pool-vehicule')) return 'vehicule';
+    if (el.classList.contains('zone-soustraitant') || el.classList.contains('pool-soustraitant')) return 'soustraitant';
+    return null;
+  }
+
+  // --- Helper: restore empty label if zone has no tags left ---
+  function maybeRestoreLabel(zone, type) {
+    if (!zone || !zone.classList.contains('ph-drop-zone')) return;
+    if (zone.querySelectorAll('.ph-res-tag').length > 0) return;
+    var label = document.createElement('span');
+    label.className = 'ph-empty-label label-' + type;
+    if (type === 'personnel') label.textContent = 'Personnel';
+    else if (type === 'vehicule') label.textContent = 'V\u00e9hicules';
+    else if (type === 'soustraitant') label.textContent = 'Sous-traitants';
+    zone.appendChild(label);
+  }
+
+  // --- Helper: get pool element by type ---
+  function getPool(type) {
+    if (type === 'personnel') return poolPersonnel;
+    if (type === 'vehicule') return poolVehicule;
+    if (type === 'soustraitant') return poolSoustraitant;
+    return null;
+  }
+
+  // --- Helper: clear all drag highlights ---
+  function clearHighlights() {
+    var items = container.querySelectorAll('.ph-drag-over');
+    for (var i = 0; i < items.length; i++) { items[i].classList.remove('ph-drag-over'); }
+  }
+
+  // ===========================================
+  // DRAG & DROP
+  // ===========================================
+  var dragData = null;
+
+  container.addEventListener('dragstart', function(e) {
+    var tag = e.target.closest('.ph-res-tag');
+    if (!tag) return;
+
+    var type = getTagType(tag);
+    if (!type) return;
+
+    var sourceZone = tag.parentElement;
+    var sourceRow = sourceZone ? sourceZone.closest('.ph-row') : null;
+
+    dragData = {
+      tag: tag,
+      type: type,
+      resourceId: tag._resourceId,
+      sourceRow: sourceRow,
+      sourceZone: sourceZone
+    };
+
+    tag.classList.add('ph-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+  });
+
+  container.addEventListener('dragover', function(e) {
+    if (!dragData) return;
+
+    clearHighlights();
+
+    var zone = e.target.closest('.ph-drop-zone, .ph-res-pool');
+    if (!zone) return;
+
+    if (getZoneType(zone) !== dragData.type) return;
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    zone.classList.add('ph-drag-over');
+  });
+
+  container.addEventListener('drop', function(e) {
+    e.preventDefault();
+    clearHighlights();
+    if (!dragData) return;
+
+    var zone = e.target.closest('.ph-drop-zone, .ph-res-pool');
+    if (!zone) { dragData = null; return; }
+    if (getZoneType(zone) !== dragData.type) { dragData = null; return; }
+
+    var isPool = zone.classList.contains('ph-res-pool');
+    var targetRow = isPool ? null : zone.closest('.ph-row');
+    var sourceRow = dragData.sourceRow;
+    var isFromPool = !sourceRow;
+
+    var sourceId = (sourceRow && sourceRow._bubbleObject) ? sourceRow._bubbleObject.get('_id') : null;
+    var targetId = (targetRow && targetRow._bubbleObject) ? targetRow._bubbleObject.get('_id') : null;
+
+    // --- Drop on pool = removal ---
+    if (isPool) {
+      if (isFromPool) { dragData = null; return; }
+
+      var tag = dragData.tag;
+      tag.classList.remove('ph-dragging');
+      var btn = tag.querySelector('.ph-tag-remove');
+      if (btn) btn.remove();
+      zone.appendChild(tag);
+      maybeRestoreLabel(dragData.sourceZone, dragData.type);
+
+      instance.publishState('resource_type', dragData.type);
+      instance.publishState('resource_id', dragData.resourceId);
+      instance.publishState('source_chantier_id', sourceId);
+      instance.publishState('target_chantier_id', '');
+      instance.triggerEvent('assignment_removed');
+      dragData = null;
+      return;
+    }
+
+    // --- Drop on drop zone ---
+    if (!isFromPool && sourceId === targetId) { dragData.tag.classList.remove('ph-dragging'); dragData = null; return; }
+
+    var tag = dragData.tag;
+    tag.classList.remove('ph-dragging');
+
+    if (isFromPool) {
+      var btn = document.createElement('span');
+      btn.className = 'ph-tag-remove';
+      btn.textContent = '\u2715';
+      tag.appendChild(btn);
+    }
+
+    var emptyLabel = zone.querySelector('.ph-empty-label');
+    if (emptyLabel) emptyLabel.remove();
+    zone.appendChild(tag);
+
+    if (!isFromPool) {
+      maybeRestoreLabel(dragData.sourceZone, dragData.type);
+    }
+
+    instance.publishState('resource_type', dragData.type);
+    instance.publishState('resource_id', dragData.resourceId);
+    instance.publishState('target_chantier_id', targetId);
+    instance.publishState('source_chantier_id', sourceId || '');
+    instance.triggerEvent('assignment_changed');
+    dragData = null;
+  });
+
+  container.addEventListener('dragend', function(e) {
+    if (dragData && dragData.tag) {
+      dragData.tag.classList.remove('ph-dragging');
+    }
+    clearHighlights();
+    dragData = null;
+  });
+
+  // ===========================================
+  // X BUTTON (remove from chantier → back to pool)
+  // ===========================================
+  container.addEventListener('click', function(e) {
+    var btn = e.target.closest('.ph-tag-remove');
+    if (!btn) return;
+
+    var tag = btn.closest('.ph-res-tag');
+    if (!tag) return;
+
+    var zone = tag.parentElement;
+    var row = zone ? zone.closest('.ph-row') : null;
+    if (!row) return;
+
+    var type = getTagType(tag);
+    if (!type) return;
+
+    var chantierId = (row._bubbleObject) ? row._bubbleObject.get('_id') : null;
+
+    btn.remove();
+    var pool = getPool(type);
+    if (pool) pool.appendChild(tag);
+
+    maybeRestoreLabel(zone, type);
+
+    instance.publishState('resource_type', type);
+    instance.publishState('resource_id', tag._resourceId);
+    instance.publishState('source_chantier_id', chantierId);
+    instance.publishState('target_chantier_id', '');
+    instance.triggerEvent('assignment_removed');
+  });
 
   // Append to canvas
   instance.canvas.append(container);

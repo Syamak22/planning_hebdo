@@ -232,7 +232,7 @@ function(instance, properties, context) {
           for (var k = 0; k < ids.length; k++) {
             var res = resourceMap[ids[k]];
             if (res) {
-              var tag = instance.data.createTag(res.name, type);
+              var tag = instance.data.createTag(res.name, type, true);
               tag._bubbleObject = res.object;
               tag._resourceId = ids[k];
               zone.appendChild(tag);
@@ -248,15 +248,6 @@ function(instance, properties, context) {
       instance.data.rowsContainer.appendChild(row);
     }
 
-    // Scroll logic
-    var rowsEl = instance.data.rowsContainer;
-    var availableHeight = rowsEl.clientHeight;
-    var rowCount = rowsEl.children.length;
-    if (rowCount > 0 && (availableHeight / rowCount) < 80) {
-      rowsEl.classList.add('ph-scroll');
-    } else {
-      rowsEl.classList.remove('ph-scroll');
-    }
   }
 
   // ===========================================
