@@ -1,9 +1,28 @@
 function(instance, properties) {
 
-  const chantiers = ['Chantier 1', 'Chantier 2', 'Chantier 3', 'Chantier 4', 'Chantier 5', 'Chantier 6'];
+  const chantiers = [
+    { name: 'Nouveau A', start: true },
+    { name: 'Nouveau B', start: true },
+    { name: 'Chantier 1', start: false },
+    { name: 'Chantier 2', start: false },
+    { name: 'Chantier 3', start: false },
+    { name: 'Chantier 4', start: false },
+    { name: 'Chantier 5', start: false },
+    { name: 'Chantier 6', start: false }
+  ];
 
   // Fake data for preview
   const planningData = {
+    'Nouveau A': {
+      personnel: ['L. Garcia'],
+      vehicules: ['Camion 5T'],
+      soustraitants: []
+    },
+    'Nouveau B': {
+      personnel: [],
+      vehicules: [],
+      soustraitants: ['Terras Co']
+    },
     'Chantier 1': {
       personnel: ['J. Dupont', 'M. Martin'],
       vehicules: ['Camion 3T'],
@@ -74,7 +93,7 @@ function(instance, properties) {
     ">${tags}</div>`;
   }
 
-  function renderChantierRow(name, data) {
+  function renderChantierRow(name, data, isStart) {
     return `<div style="
       display: flex;
       align-items: stretch;
@@ -84,7 +103,7 @@ function(instance, properties) {
       <div style="
         width: 120px;
         min-width: 120px;
-        padding: 8px 8px 8px 12px;
+        padding: 8px 8px 8px ${isStart ? '9px' : '12px'};
         display: flex;
         align-items: center;
         gap: 6px;
@@ -93,6 +112,7 @@ function(instance, properties) {
         color: #1E293B;
         border-right: 1px solid #E2E8F0;
         background: #FAFBFC;
+        ${isStart ? 'border-left: 3px solid #10B981;' : ''}
       "><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${name}</span><span style="
         width: 18px; height: 18px; min-width: 18px;
         display: inline-flex; align-items: center; justify-content: center;
@@ -170,6 +190,7 @@ function(instance, properties) {
           align-items: center;
           justify-content: center;
           gap: 12px;
+          position: relative;
         ">
           <div style="
             width: 28px; height: 28px;
@@ -197,6 +218,16 @@ function(instance, properties) {
             font-size: 14px;
             font-weight: 600;
           ">&#x203A;</div>
+          <div style="
+            width: 28px; height: 28px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #64748B;
+            background: #E2E8F0;
+            position: absolute;
+            right: 12px;
+          "><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></div>
         </div>
 
         <!-- Column Headers -->
@@ -223,7 +254,7 @@ function(instance, properties) {
 
         <!-- Rows -->
         <div style="flex: 1; overflow-y: auto;">
-          ${chantiers.map(c => renderChantierRow(c, planningData[c])).join('')}
+          ${chantiers.map(c => renderChantierRow(c.name, planningData[c.name], c.start)).join('')}
         </div>
       </div>
 

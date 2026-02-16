@@ -48,6 +48,7 @@ function(instance, context) {
       align-items: center;
       justify-content: center;
       gap: 12px;
+      position: relative;
     }
 
     .planningHebdo-${instanceId} .ph-date-nav {
@@ -186,6 +187,11 @@ function(instance, context) {
 
     .planningHebdo-${instanceId} .ph-row:last-child {
       border-bottom: none;
+    }
+
+    .planningHebdo-${instanceId} .ph-row.ph-row-start .ph-cell-chantier {
+      border-left: 3px solid #10B981;
+      padding-left: 9px;
     }
 
     .planningHebdo-${instanceId} .ph-cell-chantier {
@@ -349,7 +355,9 @@ function(instance, context) {
       border-radius: 4px;
       font-size: 11px;
       font-weight: 500;
-      white-space: nowrap;
+      white-space: normal;
+      word-break: break-word;
+      max-width: 180px;
       line-height: 1.4;
       cursor: grab;
     }
@@ -438,6 +446,126 @@ function(instance, context) {
       opacity: 1;
       background: rgba(0,0,0,0.08);
     }
+
+    /* --- Print button --- */
+    .planningHebdo-${instanceId} .ph-print-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #64748B;
+      background: #E2E8F0;
+      transition: background 0.15s;
+      position: absolute;
+      right: 12px;
+    }
+
+    .planningHebdo-${instanceId} .ph-print-btn:hover {
+      background: #CBD5E1;
+      color: #334155;
+    }
+
+    /* --- Print styles --- */
+    @media print {
+      /* Hide everything on the page */
+      body * {
+        visibility: hidden !important;
+      }
+
+      /* Show only the planning */
+      .planningHebdo-${instanceId},
+      .planningHebdo-${instanceId} * {
+        visibility: visible !important;
+      }
+
+      /* Break out of Bubble's layout */
+      .planningHebdo-${instanceId} {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100vw !important;
+        height: auto !important;
+        padding: 20px !important;
+        margin: 0 !important;
+        background: #FFFFFF !important;
+        z-index: 999999 !important;
+        overflow: visible !important;
+        display: block !important;
+      }
+
+      /* Hide non-printable elements */
+      .planningHebdo-${instanceId} .ph-resources,
+      .planningHebdo-${instanceId} .ph-print-btn,
+      .planningHebdo-${instanceId} .ph-date-nav,
+      .planningHebdo-${instanceId} .ph-date-icon,
+      .planningHebdo-${instanceId} .ph-date-input,
+      .planningHebdo-${instanceId} .ph-info-btn,
+      .planningHebdo-${instanceId} .ph-tag-remove {
+        display: none !important;
+      }
+
+      /* Grid takes full width */
+      .planningHebdo-${instanceId} .ph-grid {
+        border: 1px solid #ccc !important;
+        border-radius: 0 !important;
+        width: 100% !important;
+        overflow: visible !important;
+        display: flex !important;
+        flex-direction: column !important;
+      }
+
+      /* Date header centered */
+      .planningHebdo-${instanceId} .ph-date-header {
+        padding: 10px !important;
+        text-align: center !important;
+        border-bottom: 1px solid #ccc !important;
+        font-size: 14px !important;
+      }
+
+      /* Column headers and rows full width table layout */
+      .planningHebdo-${instanceId} .ph-col-headers,
+      .planningHebdo-${instanceId} .ph-row {
+        display: flex !important;
+        width: 100% !important;
+      }
+
+      .planningHebdo-${instanceId} .ph-col-chantier,
+      .planningHebdo-${instanceId} .ph-cell-chantier {
+        width: 25% !important;
+        min-width: 0 !important;
+        flex: none !important;
+        border-right: 1px solid #ccc !important;
+      }
+
+      .planningHebdo-${instanceId} .ph-col-header:not(.ph-col-chantier),
+      .planningHebdo-${instanceId} .ph-drop-zone {
+        flex: 1 !important;
+        border-right: 1px solid #eee !important;
+      }
+
+      /* Rows visible without scroll */
+      .planningHebdo-${instanceId} .ph-rows {
+        overflow: visible !important;
+        max-height: none !important;
+        flex: none !important;
+      }
+
+      .planningHebdo-${instanceId} .ph-row {
+        border-bottom: 1px solid #eee !important;
+        min-height: 32px !important;
+        page-break-inside: avoid !important;
+      }
+
+      /* Tags readable in print */
+      .planningHebdo-${instanceId} .ph-res-tag {
+        font-size: 10px !important;
+        padding: 1px 6px !important;
+        border: 1px solid currentColor !important;
+      }
+    }
   `;
   document.head.appendChild(style);
 
@@ -480,9 +608,35 @@ function(instance, context) {
   btnNext.className = 'ph-date-nav';
   btnNext.textContent = '\u203A';
 
+  var btnPrint = document.createElement('div');
+  btnPrint.className = 'ph-print-btn';
+  btnPrint.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
+  btnPrint.addEventListener('click', function() {
+    var originalTitle = document.title;
+    var dateStr = instance.data.currentDate
+      ? instance.data.formatDate(instance.data.currentDate)
+      : '';
+    document.title = 'Planning' + (dateStr ? ' - ' + dateStr : '');
+
+    // Temporarily expand rows so all content is visible for print
+    var rows = instance.data.rowsContainer;
+    var savedStyle = rows.style.cssText;
+    rows.style.overflow = 'visible';
+    rows.style.maxHeight = 'none';
+    rows.style.height = 'auto';
+    rows.style.flex = 'none';
+
+    window.print();
+
+    // Restore after print
+    rows.style.cssText = savedStyle;
+    document.title = originalTitle;
+  });
+
   dateHeader.appendChild(btnPrev);
   dateHeader.appendChild(dateCenter);
   dateHeader.appendChild(btnNext);
+  dateHeader.appendChild(btnPrint);
 
   // Column headers
   var colHeaders = document.createElement('div');
@@ -786,8 +940,10 @@ function(instance, context) {
     var sourceRow = dragData.sourceRow;
     var isFromPool = !sourceRow;
 
-    var sourceId = (sourceRow && sourceRow._bubbleObject) ? sourceRow._bubbleObject.get('_id') : null;
-    var targetId = (targetRow && targetRow._bubbleObject) ? targetRow._bubbleObject.get('_id') : null;
+    var sourceObj = (sourceRow && sourceRow._bubbleObject) ? sourceRow._bubbleObject : null;
+    var targetObj = (targetRow && targetRow._bubbleObject) ? targetRow._bubbleObject : null;
+    var sourceId = sourceObj ? sourceObj.get('_id') : null;
+    var targetId = targetObj ? targetObj.get('_id') : null;
 
     // --- Drop on pool = removal ---
     if (isPool) {
@@ -802,8 +958,8 @@ function(instance, context) {
 
       instance.publishState('resource_type', dragData.type);
       instance.publishState('resource_id', dragData.resourceId);
-      instance.publishState('source_chantier_id', sourceId);
-      instance.publishState('target_chantier_id', '');
+      instance.publishState('source_chantier', sourceObj);
+      instance.publishState('target_chantier', null);
       instance.triggerEvent('assignment_removed');
       dragData = null;
       return;
@@ -831,9 +987,9 @@ function(instance, context) {
     }
 
     instance.publishState('resource_type', dragData.type);
-    instance.publishState('resource_id', dragData.resourceId);
-    instance.publishState('target_chantier_id', targetId);
-    instance.publishState('source_chantier_id', sourceId || '');
+    instance.publishState('resource_id', tag._resourceId);
+    instance.publishState('target_chantier', targetObj);
+    instance.publishState('source_chantier', sourceObj);
     instance.triggerEvent('assignment_changed');
     dragData = null;
   });
@@ -863,7 +1019,7 @@ function(instance, context) {
     var type = getTagType(tag);
     if (!type) return;
 
-    var chantierId = (row._bubbleObject) ? row._bubbleObject.get('_id') : null;
+    var chantierObj = row._bubbleObject || null;
 
     btn.remove();
     var pool = getPool(type);
@@ -873,8 +1029,8 @@ function(instance, context) {
 
     instance.publishState('resource_type', type);
     instance.publishState('resource_id', tag._resourceId);
-    instance.publishState('source_chantier_id', chantierId);
-    instance.publishState('target_chantier_id', '');
+    instance.publishState('source_chantier', chantierObj);
+    instance.publishState('target_chantier', null);
     instance.triggerEvent('assignment_removed');
   });
 

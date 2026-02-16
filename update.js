@@ -14,6 +14,8 @@ function(instance, properties, context) {
   var dataSoustraitant = properties.data_type_soustraitant;
   var nameSoustraitant = properties.name_display_soustraitant;
 
+  var fieldDateDebut = properties.date_debut_chantier;
+
   var dataPlanning = properties.data_type_planning;
   var fieldChantier = properties.field_chantier;
   var fieldDate = properties.field_date;
@@ -215,7 +217,40 @@ function(instance, properties, context) {
   // ===========================================
   instance.data.rowsContainer.innerHTML = '';
 
+  // Helper: check if a date matches dayDate
+  function isSameDay(dateVal) {
+    if (!dateVal || !dayDate) return false;
+    var d1 = new Date(dayDate);
+    var d2 = new Date(dateVal);
+    return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+  }
+
   if (chantierItems && chantierItems.length > 0) {
+    // Sort: chantiers starting today first
+    if (fieldDateDebut && dayDate) {
+      chantierItems.sort(function(a, b) {
+        var aStart = (a && typeof a.get === 'function') ? isSameDay(a.get(fieldDateDebut)) : false;
+        var bStart = (b && typeof b.get === 'function') ? isSameDay(b.get(fieldDateDebut)) : false;
+        if (aStart === bStart) return 0;
+        return aStart ? -1 : 1;
+      });
+    }
+
+    function fillZone(zone, ids, resourceMap, type) {
+      if (!zone || ids.length === 0) { return; }
+      var label = zone.querySelector('.ph-empty-label');
+      if (label) { label.remove(); }
+      for (var k = 0; k < ids.length; k++) {
+        var res = resourceMap[ids[k]];
+        if (res) {
+          var tag = instance.data.createTag(res.name, type, true);
+          tag._bubbleObject = res.object;
+          tag._resourceId = ids[k];
+          zone.appendChild(tag);
+        }
+      }
+    }
+
     for (var i = 0; i < chantierItems.length; i++) {
       var item = chantierItems[i];
       if (!item || typeof item.get !== 'function') { continue; }
@@ -224,28 +259,19 @@ function(instance, properties, context) {
       var row = instance.data.createRow(displayName || '\u2014');
       row._bubbleObject = item;
 
+      // Mark row if chantier starts today
+      if (fieldDateDebut && dayDate) {
+        var startDate = item.get(fieldDateDebut);
+        if (isSameDay(startDate)) {
+          row.classList.add('ph-row-start');
+        }
+      }
+
       // Populate drop zones with assigned resources
       var chantierId = item.get('_id');
       if (chantierId && planningMap[chantierId]) {
         var assignments = planningMap[chantierId];
         var zones = row.querySelectorAll('.ph-drop-zone');
-        // zones[0] = personnel, zones[1] = vehicule, zones[2] = soustraitant
-
-        function fillZone(zone, ids, resourceMap, type) {
-          if (!zone || ids.length === 0) { return; }
-          // Remove placeholder label
-          var label = zone.querySelector('.ph-empty-label');
-          if (label) { label.remove(); }
-          for (var k = 0; k < ids.length; k++) {
-            var res = resourceMap[ids[k]];
-            if (res) {
-              var tag = instance.data.createTag(res.name, type, true);
-              tag._bubbleObject = res.object;
-              tag._resourceId = ids[k];
-              zone.appendChild(tag);
-            }
-          }
-        }
 
         fillZone(zones[0], assignments.personnel, personnelById, 'personnel');
         fillZone(zones[1], assignments.vehicule, vehiculeById, 'vehicule');
