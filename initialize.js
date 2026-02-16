@@ -41,13 +41,60 @@ function(instance, context) {
     }
 
     .planningHebdo-${instanceId} .ph-date-header {
-      padding: 10px 16px;
+      padding: 6px 16px;
       background: #F8FAFC;
       border-bottom: 1px solid #E2E8F0;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .planningHebdo-${instanceId} .ph-date-nav {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #64748B;
+      background: #E2E8F0;
+      font-size: 14px;
+      font-weight: 600;
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    .planningHebdo-${instanceId} .ph-date-nav:hover {
+      background: #CBD5E1;
+    }
+
+    .planningHebdo-${instanceId} .ph-date-center {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .planningHebdo-${instanceId} .ph-date-label {
       font-size: 13px;
       font-weight: 600;
       color: #1E293B;
+    }
+
+    .planningHebdo-${instanceId} .ph-date-icon {
+      color: #64748B;
+      display: flex;
+      align-items: center;
+    }
+
+    .planningHebdo-${instanceId} .ph-date-input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
     }
 
     .planningHebdo-${instanceId} .ph-col-headers {
@@ -371,7 +418,37 @@ function(instance, context) {
   // Date header
   var dateHeader = document.createElement('div');
   dateHeader.className = 'ph-date-header';
-  dateHeader.textContent = '—';
+
+  var btnPrev = document.createElement('div');
+  btnPrev.className = 'ph-date-nav';
+  btnPrev.textContent = '\u2039';
+
+  var dateCenter = document.createElement('div');
+  dateCenter.className = 'ph-date-center';
+
+  var dateLabel = document.createElement('span');
+  dateLabel.className = 'ph-date-label';
+  dateLabel.textContent = '\u2014';
+
+  var dateIcon = document.createElement('span');
+  dateIcon.className = 'ph-date-icon';
+  dateIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+
+  var dateInput = document.createElement('input');
+  dateInput.type = 'date';
+  dateInput.className = 'ph-date-input';
+
+  dateCenter.appendChild(dateLabel);
+  dateCenter.appendChild(dateIcon);
+  dateCenter.appendChild(dateInput);
+
+  var btnNext = document.createElement('div');
+  btnNext.className = 'ph-date-nav';
+  btnNext.textContent = '\u203A';
+
+  dateHeader.appendChild(btnPrev);
+  dateHeader.appendChild(dateCenter);
+  dateHeader.appendChild(btnNext);
 
   // Column headers
   var colHeaders = document.createElement('div');
@@ -467,7 +544,8 @@ function(instance, context) {
 
   // --- Store references ---
   instance.data.container = container;
-  instance.data.dateHeader = dateHeader;
+  instance.data.dateLabel = dateLabel;
+  instance.data.dateInput = dateInput;
   instance.data.rowsContainer = rowsContainer;
   instance.data.poolPersonnel = poolPersonnel;
   instance.data.poolVehicule = poolVehicule;
@@ -534,6 +612,36 @@ function(instance, context) {
     }
     return tag;
   };
+
+  // ===========================================
+  // DATE NAVIGATION
+  // ===========================================
+  instance.data.currentDate = null;
+
+  function shiftDate(delta) {
+    if (!instance.data.currentDate) return;
+    var d = new Date(instance.data.currentDate);
+    d.setDate(d.getDate() + delta);
+    d.setHours(0, 0, 0, 0);
+    instance.publishState('selected_date', d);
+    instance.triggerEvent('date_changed');
+  }
+
+  btnPrev.addEventListener('click', function() { shiftDate(-1); });
+  btnNext.addEventListener('click', function() { shiftDate(1); });
+
+  dateCenter.addEventListener('click', function() {
+    dateInput.showPicker();
+  });
+
+  dateInput.addEventListener('change', function() {
+    if (!dateInput.value) return;
+    var parts = dateInput.value.split('-');
+    var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    d.setHours(0, 0, 0, 0);
+    instance.publishState('selected_date', d);
+    instance.triggerEvent('date_changed');
+  });
 
   // --- Helper: get tag type from class ---
   function getTagType(el) {

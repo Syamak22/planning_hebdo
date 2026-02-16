@@ -155,15 +155,40 @@ function(instance, properties) {
       ">
         <!-- Date Header -->
         <div style="
-          padding: 10px 16px;
+          padding: 6px 16px;
           background: #F8FAFC;
           border-bottom: 1px solid #E2E8F0;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
+          gap: 12px;
         ">
-          <span style="font-size: 13px; font-weight: 600; color: #1E293B;">${dateStr}</span>
+          <div style="
+            width: 28px; height: 28px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #64748B;
+            background: #E2E8F0;
+            font-size: 14px;
+            font-weight: 600;
+          ">&#x2039;</div>
+          <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <span style="font-size: 13px; font-weight: 600; color: #1E293B;">${dateStr}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div style="
+            width: 28px; height: 28px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #64748B;
+            background: #E2E8F0;
+            font-size: 14px;
+            font-weight: 600;
+          ">&#x203A;</div>
         </div>
 
         <!-- Column Headers -->

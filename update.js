@@ -31,9 +31,16 @@ function(instance, properties, context) {
 
   // --- Date header ---
   if (dayDate) {
-    instance.data.dateHeader.textContent = instance.data.formatDate(dayDate);
+    instance.data.dateLabel.textContent = instance.data.formatDate(dayDate);
+    instance.data.currentDate = dayDate;
+    var dd = new Date(dayDate);
+    var yyyy = dd.getFullYear();
+    var mm = ('0' + (dd.getMonth() + 1)).slice(-2);
+    var ddd = ('0' + dd.getDate()).slice(-2);
+    instance.data.dateInput.value = yyyy + '-' + mm + '-' + ddd;
   } else {
-    instance.data.dateHeader.textContent = '\u2014';
+    instance.data.dateLabel.textContent = '\u2014';
+    instance.data.currentDate = null;
   }
 
   // ===========================================
