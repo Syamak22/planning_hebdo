@@ -191,14 +191,48 @@ function(instance, context) {
     .planningHebdo-${instanceId} .ph-cell-chantier {
       width: 140px;
       min-width: 140px;
-      padding: 8px 12px;
+      padding: 8px 8px 8px 12px;
       display: flex;
       align-items: center;
+      gap: 6px;
       font-size: 12px;
       font-weight: 600;
       color: #1E293B;
       border-right: 1px solid #E2E8F0;
       background: #FAFBFC;
+    }
+
+    .planningHebdo-${instanceId} .ph-chantier-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .planningHebdo-${instanceId} .ph-info-btn {
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid #CBD5E1;
+      background: #FFFFFF;
+      color: #64748B;
+      font-size: 10px;
+      font-weight: 700;
+      font-style: italic;
+      font-family: Georgia, serif;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .planningHebdo-${instanceId} .ph-info-btn:hover {
+      background: #F1F5F9;
+      border-color: #94A3B8;
+      color: #334155;
     }
 
     .planningHebdo-${instanceId} .ph-drop-zone {
@@ -567,7 +601,17 @@ function(instance, context) {
 
     var cellChantier = document.createElement('div');
     cellChantier.className = 'ph-cell-chantier';
-    cellChantier.textContent = name;
+
+    var chantierName = document.createElement('span');
+    chantierName.className = 'ph-chantier-name';
+    chantierName.textContent = name;
+
+    var infoBtn = document.createElement('span');
+    infoBtn.className = 'ph-info-btn';
+    infoBtn.textContent = 'i';
+
+    cellChantier.appendChild(chantierName);
+    cellChantier.appendChild(infoBtn);
 
     var zonePersonnel = document.createElement('div');
     zonePersonnel.className = 'ph-drop-zone zone-personnel';
@@ -832,6 +876,20 @@ function(instance, context) {
     instance.publishState('source_chantier_id', chantierId);
     instance.publishState('target_chantier_id', '');
     instance.triggerEvent('assignment_removed');
+  });
+
+  // ===========================================
+  // INFO BUTTON (chantier details)
+  // ===========================================
+  container.addEventListener('click', function(e) {
+    var btn = e.target.closest('.ph-info-btn');
+    if (!btn) return;
+
+    var row = btn.closest('.ph-row');
+    if (!row || !row._bubbleObject) return;
+
+    instance.publishState('selected_chantier', row._bubbleObject);
+    instance.triggerEvent('chantier_info_clicked');
   });
 
   // Append to canvas

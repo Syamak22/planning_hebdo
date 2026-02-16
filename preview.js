@@ -84,15 +84,23 @@ function(instance, properties) {
       <div style="
         width: 120px;
         min-width: 120px;
-        padding: 8px 12px;
+        padding: 8px 8px 8px 12px;
         display: flex;
         align-items: center;
+        gap: 6px;
         font-size: 12px;
         font-weight: 600;
         color: #1E293B;
         border-right: 1px solid #E2E8F0;
         background: #FAFBFC;
-      ">${name}</div>
+      "><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${name}</span><span style="
+        width: 18px; height: 18px; min-width: 18px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 50%; border: 1px solid #CBD5E1;
+        background: #FFFFFF; color: #64748B;
+        font-size: 10px; font-weight: 700; font-style: italic;
+        font-family: Georgia, serif; cursor: pointer;
+      ">i</span></div>
       ${renderDropZone(data.personnel, personnelColor, personnelBg, 'Personnel')}
       ${renderDropZone(data.vehicules, vehiculeColor, vehiculeBg, 'Véhicules')}
       ${renderDropZone(data.soustraitants, soustraitantColor, soustraitantBg, 'Sous-traitants')}
