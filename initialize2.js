@@ -598,107 +598,7 @@ function(instance, context) {
       color: #334155;
     }
 
-    /* --- Print styles --- */
-    @media print {
-      body * {
-        visibility: hidden !important;
-      }
-
-      .planningHebdo-${instanceId},
-      .planningHebdo-${instanceId} * {
-        visibility: visible !important;
-      }
-
-      .planningHebdo-${instanceId} {
-        position: fixed !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100vw !important;
-        height: auto !important;
-        padding: 20px !important;
-        margin: 0 !important;
-        background: #FFFFFF !important;
-        z-index: 999999 !important;
-        overflow: visible !important;
-        display: block !important;
-      }
-
-      .planningHebdo-${instanceId} .ph-main {
-        overflow: visible !important;
-        gap: 16px !important;
-      }
-
-      .planningHebdo-${instanceId} .ph-resources,
-      .planningHebdo-${instanceId} .ph-print-btn,
-      .planningHebdo-${instanceId} .ph-duplicate-btn,
-      .planningHebdo-${instanceId} .ph-date-nav,
-      .planningHebdo-${instanceId} .ph-date-icon,
-      .planningHebdo-${instanceId} .ph-date-input,
-      .planningHebdo-${instanceId} .ph-info-btn,
-      .planningHebdo-${instanceId} .ph-tag-remove {
-        display: none !important;
-      }
-
-      .planningHebdo-${instanceId} .ph-grid,
-      .planningHebdo-${instanceId} .ph-section {
-        border: 1px solid #ccc !important;
-        border-radius: 0 !important;
-        width: 100% !important;
-        overflow: visible !important;
-        display: flex !important;
-        flex-direction: column !important;
-      }
-
-      .planningHebdo-${instanceId} .ph-grid {
-        flex: none !important;
-      }
-
-      .planningHebdo-${instanceId} .ph-date-header {
-        padding: 10px !important;
-        text-align: center !important;
-        border-bottom: 1px solid #ccc !important;
-        font-size: 14px !important;
-      }
-
-      .planningHebdo-${instanceId} .ph-col-headers,
-      .planningHebdo-${instanceId} .ph-row {
-        display: flex !important;
-        width: 100% !important;
-      }
-
-      .planningHebdo-${instanceId} .ph-col-chantier,
-      .planningHebdo-${instanceId} .ph-cell-chantier {
-        width: 20% !important;
-        min-width: 0 !important;
-        flex: none !important;
-        border-right: 1px solid #ccc !important;
-      }
-
-      .planningHebdo-${instanceId} .ph-col-header:not(.ph-col-chantier),
-      .planningHebdo-${instanceId} .ph-drop-zone {
-        flex: 1 !important;
-        border-right: 1px solid #eee !important;
-      }
-
-      .planningHebdo-${instanceId} .ph-rows {
-        overflow: visible !important;
-        max-height: none !important;
-        flex: none !important;
-      }
-
-      .planningHebdo-${instanceId} .ph-row,
-      .planningHebdo-${instanceId} .ph-absence-row {
-        border-bottom: 1px solid #eee !important;
-        min-height: 32px !important;
-        page-break-inside: avoid !important;
-      }
-
-      .planningHebdo-${instanceId} .ph-res-tag {
-        font-size: 10px !important;
-        padding: 1px 6px !important;
-        border: 1px solid currentColor !important;
-      }
-    }
+    /* (print handled via popup window) */
   `;
   document.head.appendChild(style);
 
@@ -749,25 +649,104 @@ function(instance, context) {
   btnPrint.className = 'ph-print-btn';
   btnPrint.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
   btnPrint.addEventListener('click', function() {
-    var originalTitle = document.title;
     var dateStr = instance.data.currentDate
       ? instance.data.formatDate(instance.data.currentDate)
       : '';
-    document.title = 'Planning' + (dateStr ? ' - ' + dateStr : '');
+    var now = new Date();
+    var timestamp = ('0' + now.getDate()).slice(-2) + '/' + ('0' + (now.getMonth() + 1)).slice(-2) + '/' + now.getFullYear() + ' ' + ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
 
-    // Temporarily expand rows so all content is visible for print
-    var rows = instance.data.rowsContainer;
-    var savedStyle = rows.style.cssText;
-    rows.style.overflow = 'visible';
-    rows.style.maxHeight = 'none';
-    rows.style.height = 'auto';
-    rows.style.flex = 'none';
+    // --- Build chantier rows HTML ---
+    var chantierRowsHtml = '';
+    var rows = instance.data.rowsContainer.querySelectorAll('.ph-row');
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var chantierCell = row.querySelector('.ph-cell-chantier');
+      var chantierName = chantierCell ? chantierCell.textContent.replace(/[iℹ]?\s*$/, '').trim() : '';
+      var isStart = row.classList.contains('ph-row-start');
+      var zones = row.querySelectorAll('.ph-drop-zone');
+      var cells = '';
+      for (var z = 0; z < zones.length; z++) {
+        var tags = zones[z].querySelectorAll('.ph-res-tag');
+        var tagsHtml = '';
+        if (tags.length > 0) {
+          for (var t = 0; t < tags.length; t++) {
+            var tagText = tags[t].textContent.replace(/\s*×\s*$/, '').trim();
+            var tagClass = '';
+            if (tags[t].classList.contains('tag-personnel')) tagClass = 'tag-personnel';
+            else if (tags[t].classList.contains('tag-vehicule')) tagClass = 'tag-vehicule';
+            else if (tags[t].classList.contains('tag-soustraitant')) tagClass = 'tag-soustraitant';
+            tagsHtml += '<span class="tag ' + tagClass + '">' + tagText + '</span>';
+          }
+        }
+        cells += '<td class="cell">' + tagsHtml + '</td>';
+      }
+      chantierRowsHtml += '<tr' + (isStart ? ' class="row-start"' : '') + '><td class="cell cell-chantier">' + chantierName + '</td>' + cells + '</tr>';
+    }
 
-    window.print();
+    // --- Build absence rows HTML ---
+    var absenceRowsHtml = '';
+    var absRows = instance.data.absencesBody.querySelectorAll('.ph-absence-row');
+    for (var i = 0; i < absRows.length; i++) {
+      var motifCell = absRows[i].querySelector('.ph-cell-chantier');
+      var motifName = motifCell ? motifCell.textContent.trim() : '';
+      var zone = absRows[i].querySelector('.ph-drop-zone');
+      var tags = zone ? zone.querySelectorAll('.ph-res-tag') : [];
+      var tagsHtml = '';
+      for (var t = 0; t < tags.length; t++) {
+        var tagText = tags[t].textContent.replace(/\s*×\s*$/, '').trim();
+        tagsHtml += '<span class="tag tag-personnel">' + tagText + '</span>';
+      }
+      absenceRowsHtml += '<tr><td class="cell cell-motif">' + motifName + '</td><td class="cell" colspan="4">' + tagsHtml + '</td></tr>';
+    }
 
-    // Restore after print
-    rows.style.cssText = savedStyle;
-    document.title = originalTitle;
+    // --- Build bureau HTML ---
+    var bureauTagsHtml = '';
+    var bureauTags = instance.data.bureauZone.querySelectorAll('.ph-res-tag');
+    for (var t = 0; t < bureauTags.length; t++) {
+      var tagText = bureauTags[t].textContent.replace(/\s*×\s*$/, '').trim();
+      bureauTagsHtml += '<span class="tag tag-personnel">' + tagText + '</span>';
+    }
+
+    // --- Full HTML document ---
+    var html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+      '<title>Planning' + (dateStr ? ' - ' + dateStr : '') + '</title>' +
+      '<style>' +
+      '* { margin: 0; padding: 0; box-sizing: border-box; }' +
+      'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11px; color: #1e293b; padding: 20px; }' +
+      '.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 9px; color: #94a3b8; }' +
+      '.date-title { text-align: center; font-size: 14px; font-weight: 600; padding: 10px 0; border: 1px solid #ccc; border-bottom: none; background: #f8fafc; }' +
+      'table { width: 100%; border-collapse: collapse; }' +
+      'th { background: #f8fafc; font-weight: 600; text-align: left; padding: 4px 6px; border: 1px solid #ccc; font-size: 10px; }' +
+      'th.col-chantier { width: 22%; }' +
+      'td.cell { padding: 4px 6px; border: 1px solid #ddd; vertical-align: top; }' +
+      'td.cell-chantier, td.cell-motif { font-weight: 500; width: 22%; }' +
+      'tr.row-start td.cell-chantier { border-left: 3px solid #22c55e; }' +
+      '.section-title { font-size: 11px; font-weight: 600; padding: 6px; border: 1px solid #ccc; border-bottom: none; margin-top: 12px; }' +
+      '.section-title.absence { color: #ef4444; }' +
+      '.section-title.bureau { color: #3b82f6; }' +
+      '.bureau-content { padding: 6px; border: 1px solid #ccc; min-height: 24px; display: flex; flex-wrap: wrap; gap: 4px; }' +
+      '.tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; border: 1px solid; margin: 1px; }' +
+      '.tag-personnel { color: #1d4ed8; border-color: #1d4ed8; background: #eff6ff; }' +
+      '.tag-vehicule { color: #15803d; border-color: #15803d; background: #f0fdf4; }' +
+      '.tag-soustraitant { color: #c2410c; border-color: #c2410c; background: #fff7ed; }' +
+      '@media print { body { padding: 10px; } }' +
+      '</style></head><body>' +
+      '<div class="header"><span>' + timestamp + '</span><span>Planning - ' + dateStr + '</span></div>' +
+      '<div class="date-title">' + dateStr + '</div>' +
+      '<table>' +
+      '<thead><tr><th class="col-chantier">CHANTIER</th><th>\ud83d\udc64 PERSONNEL</th><th>\ud83d\ude9a V\u00c9HICULES</th><th>\ud83d\udce6 SOUS-TRAITANTS</th><th>\ud83d\udd27 ATELIER</th></tr></thead>' +
+      '<tbody>' + chantierRowsHtml + '</tbody>' +
+      '</table>' +
+      '<div class="section-title absence">\u26d4 Absences / Indisponibilit\u00e9s</div>' +
+      '<table><tbody>' + absenceRowsHtml + '</tbody></table>' +
+      '<div class="section-title bureau">\ud83c\udfe2 Bureau</div>' +
+      '<div class="bureau-content">' + (bureauTagsHtml || '<span style="color:#94a3b8;">Personnel au bureau</span>') + '</div>' +
+      '</body></html>';
+
+    var printWindow = window.open('', '_blank');
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = function() { printWindow.print(); };
   });
 
   // Duplicate button + hidden date input

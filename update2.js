@@ -299,15 +299,6 @@ function(instance, properties, context) {
   instance.data.lastMasterHash = hash;
 
   // ===========================================
-  // STEP 3b: SHOW/HIDE DUPLICATE BUTTON
-  // ===========================================
-  var hasExistingData = Object.keys(planningMap).length > 0 || bureauPersonnelIds.length > 0;
-  for (var ak in absenceMap) {
-    if (absenceMap[ak].length > 0) { hasExistingData = true; break; }
-  }
-  instance.data.btnDuplicate.style.display = hasExistingData ? 'none' : 'flex';
-
-  // ===========================================
   // STEP 4: BUILD CHANTIER ROWS + ASSIGNMENTS
   // ===========================================
   instance.data.rowsContainer.innerHTML = '';
