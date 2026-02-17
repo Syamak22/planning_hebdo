@@ -251,10 +251,31 @@ function(instance, context) {
       flex-shrink: 0;
     }
 
-    .planningHebdo-${instanceId} .ph-info-btn:hover {
+    .planningHebdo-${instanceId} .ph-info-btn:hover,
+    .planningHebdo-${instanceId} .ph-comment-btn:hover {
       background: #F1F5F9;
       border-color: #94A3B8;
       color: #334155;
+    }
+
+    .planningHebdo-${instanceId} .ph-comment-btn {
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid #CBD5E1;
+      background: #FFFFFF;
+      color: #64748B;
+      cursor: pointer;
+    }
+
+    .planningHebdo-${instanceId} .ph-comment-btn.has-comment {
+      color: #f59e0b;
+      border-color: #f59e0b;
+      background: #fffbeb;
     }
 
     .planningHebdo-${instanceId} .ph-drop-zone {
@@ -657,12 +678,15 @@ function(instance, context) {
 
     // --- Build chantier rows HTML ---
     var chantierRowsHtml = '';
+    var pMap = instance.data.planningMap || {};
     var rows = instance.data.rowsContainer.querySelectorAll('.ph-row');
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
       var chantierCell = row.querySelector('.ph-cell-chantier');
-      var chantierName = chantierCell ? chantierCell.textContent.replace(/[iℹ]?\s*$/, '').trim() : '';
+      var chantierName = chantierCell ? chantierCell.querySelector('.ph-chantier-name').textContent.trim() : '';
       var isStart = row.classList.contains('ph-row-start');
+      var chantierId = row._bubbleObject ? row._bubbleObject.get('_id') : null;
+      var commentaire = (chantierId && pMap[chantierId]) ? (pMap[chantierId].commentaire || '') : '';
       var zones = row.querySelectorAll('.ph-drop-zone');
       var cells = '';
       for (var z = 0; z < zones.length; z++) {
@@ -680,6 +704,7 @@ function(instance, context) {
         }
         cells += '<td class="cell">' + tagsHtml + '</td>';
       }
+      cells += '<td class="cell cell-comment">' + commentaire + '</td>';
       chantierRowsHtml += '<tr' + (isStart ? ' class="row-start"' : '') + '><td class="cell cell-chantier">' + chantierName + '</td>' + cells + '</tr>';
     }
 
@@ -687,7 +712,7 @@ function(instance, context) {
     var absenceRowsHtml = '';
     var absRows = instance.data.absencesBody.querySelectorAll('.ph-absence-row');
     for (var i = 0; i < absRows.length; i++) {
-      var motifCell = absRows[i].querySelector('.ph-cell-chantier');
+      var motifCell = absRows[i].querySelector('.ph-absence-label');
       var motifName = motifCell ? motifCell.textContent.trim() : '';
       var zone = absRows[i].querySelector('.ph-drop-zone');
       var tags = zone ? zone.querySelectorAll('.ph-res-tag') : [];
@@ -696,7 +721,7 @@ function(instance, context) {
         var tagText = tags[t].textContent.replace(/\s*×\s*$/, '').trim();
         tagsHtml += '<span class="tag tag-personnel">' + tagText + '</span>';
       }
-      absenceRowsHtml += '<tr><td class="cell cell-motif">' + motifName + '</td><td class="cell" colspan="4">' + tagsHtml + '</td></tr>';
+      absenceRowsHtml += '<tr><td class="cell cell-motif">' + motifName + '</td><td class="cell" colspan="5">' + tagsHtml + '</td></tr>';
     }
 
     // --- Build bureau HTML ---
@@ -717,9 +742,11 @@ function(instance, context) {
       '.date-title { text-align: center; font-size: 14px; font-weight: 600; padding: 10px 0; border: 1px solid #ccc; border-bottom: none; background: #f8fafc; }' +
       'table { width: 100%; border-collapse: collapse; }' +
       'th { background: #f8fafc; font-weight: 600; text-align: left; padding: 4px 6px; border: 1px solid #ccc; font-size: 10px; }' +
-      'th.col-chantier { width: 22%; }' +
+      'th.col-chantier { width: 18%; }' +
+      'th.col-comment { width: 120px; min-width: 120px; max-width: 120px; }' +
       'td.cell { padding: 4px 6px; border: 1px solid #ddd; vertical-align: top; }' +
-      'td.cell-chantier, td.cell-motif { font-weight: 500; width: 22%; }' +
+      'td.cell-chantier, td.cell-motif { font-weight: 500; width: 18%; }' +
+      'td.cell-comment { font-size: 9px; color: #64748b; font-style: italic; width: 120px; min-width: 120px; max-width: 120px; word-wrap: break-word; overflow-wrap: break-word; }' +
       'tr.row-start td.cell-chantier { border-left: 3px solid #22c55e; }' +
       '.section-title { font-size: 11px; font-weight: 600; padding: 6px; border: 1px solid #ccc; border-bottom: none; margin-top: 12px; }' +
       '.section-title.absence { color: #ef4444; }' +
@@ -734,7 +761,7 @@ function(instance, context) {
       '<div class="header"><span>' + timestamp + '</span><span>Planning - ' + dateStr + '</span></div>' +
       '<div class="date-title">' + dateStr + '</div>' +
       '<table>' +
-      '<thead><tr><th class="col-chantier">CHANTIER</th><th>\ud83d\udc64 PERSONNEL</th><th>\ud83d\ude9a V\u00c9HICULES</th><th>\ud83d\udce6 SOUS-TRAITANTS</th><th>\ud83d\udd27 ATELIER</th></tr></thead>' +
+      '<thead><tr><th class="col-chantier">CHANTIER</th><th>\ud83d\udc64 PERSONNEL</th><th>\ud83d\ude9a V\u00c9HICULES</th><th>\ud83d\udce6 SOUS-TRAITANTS</th><th>\ud83d\udd27 ATELIER</th><th class="col-comment">\ud83d\udcdd COMMENTAIRE</th></tr></thead>' +
       '<tbody>' + chantierRowsHtml + '</tbody>' +
       '</table>' +
       '<div class="section-title absence">\u26d4 Absences / Indisponibilit\u00e9s</div>' +
@@ -953,11 +980,17 @@ function(instance, context) {
     chantierName.className = 'ph-chantier-name';
     chantierName.textContent = name;
 
+    var commentBtn = document.createElement('span');
+    commentBtn.className = 'ph-comment-btn';
+    commentBtn.title = 'Commentaire';
+    commentBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+
     var infoBtn = document.createElement('span');
     infoBtn.className = 'ph-info-btn';
     infoBtn.textContent = 'i';
 
     cellChantier.appendChild(chantierName);
+    cellChantier.appendChild(commentBtn);
     cellChantier.appendChild(infoBtn);
 
     var zonePersonnel = document.createElement('div');
@@ -1335,6 +1368,21 @@ function(instance, context) {
     instance.publishState('drop_zone', 'pool');
     instance.publishState('motif_absence', motif);
     instance.triggerEvent('assignment_removed');
+  });
+
+  // ===========================================
+  // COMMENT BUTTON (add/edit comment)
+  // ===========================================
+  container.addEventListener('click', function(e) {
+    var btn = e.target.closest('.ph-comment-btn');
+    if (!btn) return;
+
+    var row = btn.closest('.ph-row');
+    if (!row || !row._bubbleObject) return;
+
+    resetAllStates();
+    instance.publishState('selected_chantier', row._bubbleObject);
+    instance.triggerEvent('add_commentaire');
   });
 
   // ===========================================

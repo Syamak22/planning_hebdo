@@ -22,6 +22,7 @@ function(instance, properties, context) {
   var fieldVehicule = properties.field_vehicule;
   var fieldSoustraitant = properties.field_soustraitant;
   var fieldAtelierPersonnel = properties.field_atelier_personnel;
+  var fieldCommentaire = properties.field_commentaire;
 
   // Absences: list of text strings (type names)
   var dataAbsenceTypes = properties.data_type_absence_types;
@@ -170,11 +171,14 @@ function(instance, properties, context) {
         }
         if (!chId) { continue; }
 
+        var commentaire = fieldCommentaire ? (planItem.get(fieldCommentaire) || '') : '';
+
         var entry = {
           personnel: extractIds(planItem, fieldPersonnel),
           vehicule: extractIds(planItem, fieldVehicule),
           soustraitant: extractIds(planItem, fieldSoustraitant),
-          atelier: extractIds(planItem, fieldAtelierPersonnel)
+          atelier: extractIds(planItem, fieldAtelierPersonnel),
+          commentaire: commentaire
         };
         planningMap[chId] = entry;
 
@@ -282,7 +286,7 @@ function(instance, properties, context) {
   hash += '|pl:' + planKeys.length;
   for (var i = 0; i < planKeys.length; i++) {
     var pe = planningMap[planKeys[i]];
-    hash += '|' + planKeys[i] + '=' + pe.personnel.join(',') + '/' + pe.vehicule.join(',') + '/' + pe.soustraitant.join(',') + '/' + pe.atelier.join(',');
+    hash += '|' + planKeys[i] + '=' + pe.personnel.join(',') + '/' + pe.vehicule.join(',') + '/' + pe.soustraitant.join(',') + '/' + pe.atelier.join(',') + '/' + pe.commentaire;
   }
 
   // Absence hash
@@ -297,6 +301,7 @@ function(instance, properties, context) {
 
   if (instance.data.lastMasterHash === hash) { return; }
   instance.data.lastMasterHash = hash;
+  instance.data.planningMap = planningMap;
 
   // ===========================================
   // STEP 4: BUILD CHANTIER ROWS + ASSIGNMENTS
@@ -355,6 +360,12 @@ function(instance, properties, context) {
         fillZone(zones[1], assignments.vehicule, vehiculeById, 'vehicule');
         fillZone(zones[2], assignments.soustraitant, soustraitantById, 'soustraitant');
         fillZone(zones[3], assignments.atelier, personnelById, 'personnel');
+
+        // Highlight comment button if comment exists
+        if (assignments.commentaire) {
+          var cBtn = row.querySelector('.ph-comment-btn');
+          if (cBtn) { cBtn.classList.add('has-comment'); }
+        }
       }
 
       instance.data.rowsContainer.appendChild(row);

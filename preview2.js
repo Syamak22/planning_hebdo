@@ -15,33 +15,38 @@ function(instance, properties) {
       personnel: ['L. Garcia'],
       vehicules: ['Camion 5T'],
       soustraitants: [],
-      atelier: ['R. Petit']
+      atelier: ['R. Petit'],
+      commentaire: 'RDV 8h sur site'
     },
     'Nouveau B': {
       personnel: [],
       vehicules: [],
       soustraitants: ['Terras Co'],
-      atelier: []
+      atelier: [],
+      commentaire: ''
     },
     'Chantier 1': {
       personnel: ['J. Dupont', 'M. Martin'],
       vehicules: ['Camion 3T'],
       soustraitants: ['Elec Pro'],
-      atelier: ['B. Noel']
+      atelier: ['B. Noel'],
+      commentaire: 'Finir pose charpente'
     },
     'Chantier 2': {
       personnel: ['P. Durand'],
       vehicules: [],
       soustraitants: [],
-      atelier: []
+      atelier: [],
+      commentaire: ''
     },
     'Chantier 3': {
       personnel: [],
       vehicules: ['Fourgon 2'],
       soustraitants: ['Plomb Express'],
-      atelier: []
+      atelier: [],
+      commentaire: 'Attente livraison bois'
     },
-    'Chantier 4': { personnel: [], vehicules: [], soustraitants: [], atelier: [] }
+    'Chantier 4': { personnel: [], vehicules: [], soustraitants: [], atelier: [], commentaire: '' }
   };
 
   const availablePersonnel = ['A. Leroy', 'S. Morel'];
@@ -137,6 +142,12 @@ function(instance, properties) {
         background: #FAFBFC;
         ${isStart ? 'border-left: 3px solid #10B981;' : ''}
       "><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${name}</span><span style="
+        width: 18px; height: 18px; min-width: 18px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 50%; border: 1px solid #CBD5E1;
+        background: #FFFFFF; color: #64748B;
+        cursor: pointer;
+      " title="Commentaire"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span style="
         width: 18px; height: 18px; min-width: 18px;
         display: inline-flex; align-items: center; justify-content: center;
         border-radius: 50%; border: 1px solid #CBD5E1;
