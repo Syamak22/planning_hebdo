@@ -10,6 +10,7 @@ function(instance, properties, context) {
 
   var dataVehicule = properties.data_type_vehicule;
   var nameVehicule = properties.name_display_vehicule;
+  var dataVehiculeIndisponible = properties.data_type_vehicule_indisponible;
 
   var dataSoustraitant = properties.data_type_soustraitant;
   var nameSoustraitant = properties.name_display_soustraitant;
@@ -101,6 +102,21 @@ function(instance, properties, context) {
 
   try { buildMap(dataSoustraitant, nameSoustraitant, soustraitantById); }
   catch (e) { if (!e.not_ready_key) { console.error('PH soustraitant read:', e); } }
+
+  // Build set of unavailable vehicle IDs
+  var vehiculeIndisponibleSet = {};
+  try {
+    var indispoItems = readList(dataVehiculeIndisponible);
+    if (indispoItems) {
+      for (var i = 0; i < indispoItems.length; i++) {
+        var indispoItem = indispoItems[i];
+        if (indispoItem && typeof indispoItem.get === 'function') {
+          var indispoId = indispoItem.get('_id');
+          if (indispoId) { vehiculeIndisponibleSet[indispoId] = true; }
+        }
+      }
+    }
+  } catch (e) { if (!e.not_ready_key) { console.error('PH vehicule indispo read:', e); } }
 
   // ===========================================
   // STEP 2: READ PLANNING DATA (chantiers)
@@ -280,6 +296,7 @@ function(instance, properties, context) {
   hash += '|p:' + Object.keys(personnelById).length;
   hash += '|v:' + Object.keys(vehiculeById).length;
   hash += '|s:' + Object.keys(soustraitantById).length;
+  hash += '|vi:' + Object.keys(vehiculeIndisponibleSet).sort().join(',');
 
   // Planning hash
   var planKeys = Object.keys(planningMap).sort();
@@ -326,7 +343,8 @@ function(instance, properties, context) {
       for (var k = 0; k < ids.length; k++) {
         var res = resourceMap[ids[k]];
         if (res) {
-          var tag = instance.data.createTag(res.name, type, true);
+          var isUnavailable = type === 'vehicule' && vehiculeIndisponibleSet[ids[k]];
+          var tag = instance.data.createTag(res.name, type, true, isUnavailable);
           tag._bubbleObject = res.object;
           tag._resourceId = ids[k];
           zone.appendChild(tag);
@@ -438,7 +456,8 @@ function(instance, properties, context) {
     for (var i = 0; i < keys.length; i++) {
       if (assignedMap[keys[i]]) { continue; }
       var res = resourceMap[keys[i]];
-      var tag = instance.data.createTag(res.name, type);
+      var isUnavailable = type === 'vehicule' && vehiculeIndisponibleSet[keys[i]];
+      var tag = instance.data.createTag(res.name, type, false, isUnavailable);
       tag._bubbleObject = res.object;
       tag._resourceId = keys[i];
       pool.appendChild(tag);

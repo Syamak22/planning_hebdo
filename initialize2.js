@@ -489,6 +489,14 @@ function(instance, context) {
       border: 1px solid #10B98122;
     }
 
+    .planningHebdo-${instanceId} .ph-res-tag.tag-unavailable {
+      text-decoration: line-through;
+      opacity: 0.5;
+      background: #F1F5F9;
+      color: #94A3B8;
+      border-color: #CBD5E1;
+    }
+
     .planningHebdo-${instanceId} .ph-res-tag.tag-soustraitant {
       color: #F59E0B;
       background: #FFFBEB;
@@ -1054,9 +1062,10 @@ function(instance, context) {
   };
 
   // --- Helper: create a resource tag ---
-  instance.data.createTag = function(name, type, removable) {
+  instance.data.createTag = function(name, type, removable, unavailable) {
     var tag = document.createElement('span');
     tag.className = 'ph-res-tag tag-' + type;
+    if (unavailable) { tag.classList.add('tag-unavailable'); }
     tag.setAttribute('draggable', 'true');
     tag.textContent = name;
     if (removable) {
