@@ -17,6 +17,9 @@ function(instance, properties, context) {
   var dataSoustraitant = properties.data_type_soustraitant;
   var nameSoustraitant = properties.name_display_soustraitant;
 
+  var resourcesPanelPercent = properties.resources_panel_percent;
+  var chantierColWidth = properties.chantier_col_width;
+
   var fieldDateDebut = properties.date_debut_chantier;
 
   var dataPlanning = properties.data_type_planning;
@@ -46,6 +49,14 @@ function(instance, properties, context) {
   try {
 
   if (!instance.data.initialized) { return; }
+
+  // --- Layout CSS variables (applied every update, before hash check) ---
+  if (instance.data.container) {
+    var rPct = (resourcesPanelPercent > 0) ? resourcesPanelPercent : 28;
+    var cPx  = (chantierColWidth > 0) ? chantierColWidth : 140;
+    instance.data.container.style.setProperty('--ph-resources-width', rPct + '%');
+    instance.data.container.style.setProperty('--ph-chantier-col-width', cPx + 'px');
+  }
 
   // --- Date header ---
   if (dayDate) {
@@ -489,8 +500,13 @@ function(instance, properties, context) {
   }
 
   populatePool(instance.data.poolPersonnel, personnelById, assignedPersonnel, 'personnel');
+  if (instance.data.countPersonnel) { instance.data.countPersonnel.textContent = instance.data.poolPersonnel.querySelectorAll('.ph-res-tag').length || ''; }
+
   populatePool(instance.data.poolVehicule, vehiculeById, assignedVehicule, 'vehicule');
+  if (instance.data.countVehicule) { instance.data.countVehicule.textContent = instance.data.poolVehicule.querySelectorAll('.ph-res-tag').length || ''; }
+
   populatePool(instance.data.poolSoustraitant, soustraitantById, assignedSoustraitant, 'soustraitant');
+  if (instance.data.countSoustraitant) { instance.data.countSoustraitant.textContent = instance.data.poolSoustraitant.querySelectorAll('.ph-res-tag').length || ''; }
 
   } finally {
     instance.data.isUpdating = false;

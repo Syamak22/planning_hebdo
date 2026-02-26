@@ -135,8 +135,8 @@ function(instance, context) {
     }
 
     .planningHebdo-${instanceId} .ph-col-chantier {
-      width: 140px;
-      min-width: 140px;
+      width: var(--ph-chantier-col-width, 140px);
+      min-width: var(--ph-chantier-col-width, 140px);
       flex: none;
       text-align: left;
       padding: 6px 12px;
@@ -211,8 +211,8 @@ function(instance, context) {
     }
 
     .planningHebdo-${instanceId} .ph-cell-chantier {
-      width: 140px;
-      min-width: 140px;
+      width: var(--ph-chantier-col-width, 140px);
+      min-width: var(--ph-chantier-col-width, 140px);
       padding: 8px 8px 8px 12px;
       display: flex;
       align-items: center;
@@ -399,8 +399,9 @@ function(instance, context) {
 
     /* --- Resource Panel --- */
     .planningHebdo-${instanceId} .ph-resources {
-      width: 180px;
-      min-width: 180px;
+      flex: 0 0 var(--ph-resources-width, 28%);
+      min-width: 160px;
+      max-width: 500px;
       display: flex;
       flex-direction: column;
       border: 1px solid #E2E8F0;
@@ -436,7 +437,24 @@ function(instance, context) {
       display: flex;
       align-items: center;
       gap: 4px;
+      justify-content: space-between;
     }
+
+    .planningHebdo-${instanceId} .ph-pool-count {
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+      border-radius: 10px;
+      padding: 0 5px;
+      min-width: 16px;
+      text-align: center;
+      line-height: 16px;
+      display: inline-block;
+    }
+
+    .planningHebdo-${instanceId} .ph-pool-count.count-personnel { background: #3B82F6; }
+    .planningHebdo-${instanceId} .ph-pool-count.count-vehicule   { background: #10B981; }
+    .planningHebdo-${instanceId} .ph-pool-count.count-soustraitant { background: #F59E0B; }
 
     .planningHebdo-${instanceId} .ph-res-pool {
       display: flex;
@@ -929,7 +947,12 @@ function(instance, context) {
   var labelPersonnel = document.createElement('div');
   labelPersonnel.className = 'ph-res-section-label';
   labelPersonnel.style.color = '#3B82F6';
-  labelPersonnel.textContent = '\u{1F464} Personnel';
+  var labelPersonnelText = document.createElement('span');
+  labelPersonnelText.textContent = '\u{1F464} Personnel';
+  var countPersonnel = document.createElement('span');
+  countPersonnel.className = 'ph-pool-count count-personnel';
+  labelPersonnel.appendChild(labelPersonnelText);
+  labelPersonnel.appendChild(countPersonnel);
   var poolPersonnel = document.createElement('div');
   poolPersonnel.className = 'ph-res-pool pool-personnel';
   secPersonnel.appendChild(labelPersonnel);
@@ -940,7 +963,12 @@ function(instance, context) {
   var labelVehicule = document.createElement('div');
   labelVehicule.className = 'ph-res-section-label';
   labelVehicule.style.color = '#10B981';
-  labelVehicule.textContent = '\u{1F699} V\u00e9hicules';
+  var labelVehiculeText = document.createElement('span');
+  labelVehiculeText.textContent = '\u{1F699} V\u00e9hicules';
+  var countVehicule = document.createElement('span');
+  countVehicule.className = 'ph-pool-count count-vehicule';
+  labelVehicule.appendChild(labelVehiculeText);
+  labelVehicule.appendChild(countVehicule);
   var poolVehicule = document.createElement('div');
   poolVehicule.className = 'ph-res-pool pool-vehicule';
   secVehicule.appendChild(labelVehicule);
@@ -951,7 +979,12 @@ function(instance, context) {
   var labelSoustraitant = document.createElement('div');
   labelSoustraitant.className = 'ph-res-section-label';
   labelSoustraitant.style.color = '#F59E0B';
-  labelSoustraitant.textContent = '\u{1F4BC} Sous-traitants';
+  var labelSoustraitantText = document.createElement('span');
+  labelSoustraitantText.textContent = '\u{1F4BC} Sous-traitants';
+  var countSoustraitant = document.createElement('span');
+  countSoustraitant.className = 'ph-pool-count count-soustraitant';
+  labelSoustraitant.appendChild(labelSoustraitantText);
+  labelSoustraitant.appendChild(countSoustraitant);
   var poolSoustraitant = document.createElement('div');
   poolSoustraitant.className = 'ph-res-pool pool-soustraitant';
   secSoustraitant.appendChild(labelSoustraitant);
@@ -976,6 +1009,9 @@ function(instance, context) {
   instance.data.poolPersonnel = poolPersonnel;
   instance.data.poolVehicule = poolVehicule;
   instance.data.poolSoustraitant = poolSoustraitant;
+  instance.data.countPersonnel = countPersonnel;
+  instance.data.countVehicule = countVehicule;
+  instance.data.countSoustraitant = countSoustraitant;
   instance.data.absencesBody = absencesBody;
   instance.data.bureauZone = bureauZone;
   instance.data.btnDuplicate = btnDuplicate;
@@ -1187,6 +1223,15 @@ function(instance, context) {
     return null;
   }
 
+  // --- Helper: update pool count badge for a given resource type ---
+  function updatePoolCount(type) {
+    var pool, countEl;
+    if (type === 'personnel')    { pool = poolPersonnel;    countEl = countPersonnel; }
+    else if (type === 'vehicule') { pool = poolVehicule;     countEl = countVehicule; }
+    else if (type === 'soustraitant') { pool = poolSoustraitant; countEl = countSoustraitant; }
+    if (pool && countEl) { countEl.textContent = pool.querySelectorAll('.ph-res-tag').length || ''; }
+  }
+
   // --- Helper: reset all states before publishing new ones ---
   function resetAllStates() {
     instance.publishState('resource_type', null);
@@ -1297,13 +1342,14 @@ function(instance, context) {
 
     // --- Drop on pool = removal ---
     if (isPool) {
-      if (isFromPool) { dragData = null; return; }
+      if (isFromPool) { dragData.tag.classList.remove('ph-dragging'); dragData = null; return; }
 
       var tag = dragData.tag;
       tag.classList.remove('ph-dragging');
       var btn = tag.querySelector('.ph-tag-remove');
       if (btn) btn.remove();
       zone.appendChild(tag);
+      updatePoolCount(dragData.type);
       maybeRestoreLabel(dragData.sourceZone);
 
       resetAllStates();
@@ -1344,6 +1390,7 @@ function(instance, context) {
     var emptyLabel = zone.querySelector('.ph-empty-label');
     if (emptyLabel) emptyLabel.remove();
     zone.appendChild(tag);
+    if (isFromPool) { updatePoolCount(dragData.type); }
 
     if (!isFromPool) {
       maybeRestoreLabel(dragData.sourceZone);
@@ -1396,7 +1443,7 @@ function(instance, context) {
 
     btn.remove();
     var pool = getPool(type);
-    if (pool) pool.appendChild(tag);
+    if (pool) { pool.appendChild(tag); updatePoolCount(type); }
 
     maybeRestoreLabel(zone);
 
