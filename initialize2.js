@@ -511,6 +511,19 @@ function(instance, context) {
       opacity: 0.35;
     }
 
+    .planningHebdo-${instanceId} .ph-res-tag.ph-driver-vehicle {
+      border-color: #10B981 !important;
+      background: #D1FAE5 !important;
+      color: #065F46 !important;
+      box-shadow: 0 0 0 2px #10B98155;
+      animation: ph-pulse-driver-${instanceId} 1s ease-in-out infinite;
+    }
+
+    @keyframes ph-pulse-driver-${instanceId} {
+      0%, 100% { box-shadow: 0 0 0 2px #10B98155; }
+      50%       { box-shadow: 0 0 0 5px #10B98199; }
+    }
+
     /* --- Drag over highlights --- */
     .planningHebdo-${instanceId} .ph-drop-zone.ph-drag-over {
       outline: 2px dashed;
@@ -1223,6 +1236,21 @@ function(instance, context) {
     tag.classList.add('ph-dragging');
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', '');
+
+    // If dragging a personnel tag, highlight their associated vehicles everywhere
+    if (type === 'personnel' && instance.data.conducteurToVehiculeIds) {
+      var driverVehiculeIds = instance.data.conducteurToVehiculeIds[tag._resourceId] || [];
+      if (driverVehiculeIds.length > 0) {
+        var driverVehiculeSet = {};
+        for (var dv = 0; dv < driverVehiculeIds.length; dv++) { driverVehiculeSet[driverVehiculeIds[dv]] = true; }
+        var allVehicleTags = container.querySelectorAll('.ph-res-tag.tag-vehicule');
+        for (var vt = 0; vt < allVehicleTags.length; vt++) {
+          if (driverVehiculeSet[allVehicleTags[vt]._resourceId]) {
+            allVehicleTags[vt].classList.add('ph-driver-vehicle');
+          }
+        }
+      }
+    }
   });
 
   container.addEventListener('dragover', function(e) {
@@ -1337,6 +1365,9 @@ function(instance, context) {
     if (dragData && dragData.tag) {
       dragData.tag.classList.remove('ph-dragging');
     }
+    // Remove driver vehicle highlights
+    var highlighted = container.querySelectorAll('.ph-driver-vehicle');
+    for (var h = 0; h < highlighted.length; h++) { highlighted[h].classList.remove('ph-driver-vehicle'); }
     clearHighlights();
     dragData = null;
   });

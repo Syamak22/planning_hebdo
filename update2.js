@@ -11,6 +11,8 @@ function(instance, properties, context) {
   var dataVehicule = properties.data_type_vehicule;
   var nameVehicule = properties.name_display_vehicule;
   var dataVehiculeIndisponible = properties.data_type_vehicule_indisponible;
+  var fieldConducteur1 = properties.field_conducteur_1_vehicule;
+  var fieldConducteur2 = properties.field_conducteur_2_vehicule;
 
   var dataSoustraitant = properties.data_type_soustraitant;
   var nameSoustraitant = properties.name_display_soustraitant;
@@ -102,6 +104,28 @@ function(instance, properties, context) {
 
   try { buildMap(dataSoustraitant, nameSoustraitant, soustraitantById); }
   catch (e) { if (!e.not_ready_key) { console.error('PH soustraitant read:', e); } }
+
+  // Build conducteur → vehicule reverse map
+  var conducteurToVehiculeIds = {};
+  try {
+    for (var vid in vehiculeById) {
+      var vObj = vehiculeById[vid].object;
+      var conducteurIds = [];
+      if (fieldConducteur1) {
+        var c1 = vObj.get(fieldConducteur1);
+        if (c1 && typeof c1.get === 'function') { var c1id = c1.get('_id'); if (c1id) conducteurIds.push(c1id); }
+      }
+      if (fieldConducteur2) {
+        var c2 = vObj.get(fieldConducteur2);
+        if (c2 && typeof c2.get === 'function') { var c2id = c2.get('_id'); if (c2id) conducteurIds.push(c2id); }
+      }
+      for (var ci = 0; ci < conducteurIds.length; ci++) {
+        if (!conducteurToVehiculeIds[conducteurIds[ci]]) { conducteurToVehiculeIds[conducteurIds[ci]] = []; }
+        conducteurToVehiculeIds[conducteurIds[ci]].push(vid);
+      }
+    }
+  } catch (e) { if (!e.not_ready_key) { console.error('PH conducteur map:', e); } }
+  instance.data.conducteurToVehiculeIds = conducteurToVehiculeIds;
 
   // Build set of unavailable vehicle IDs
   var vehiculeIndisponibleSet = {};
