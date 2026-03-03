@@ -355,6 +355,12 @@ function(instance, properties, context) {
   instance.data.lastMasterHash = hash;
   instance.data.planningMap = planningMap;
 
+  // Pendant un drag actif, bloquer la reconstruction DOM pour éviter le flash
+  if (instance.data.isDragging) {
+    instance.data.lastMasterHash = null; // forcer un rebuild au prochain appel
+    return;
+  }
+
   // ===========================================
   // STEP 4: BUILD CHANTIER ROWS + ASSIGNMENTS
   // ===========================================

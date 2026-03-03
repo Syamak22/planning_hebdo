@@ -1279,6 +1279,7 @@ function(instance, context) {
     };
 
     tag.classList.add('ph-dragging');
+    instance.data.isDragging = true;
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', '');
 
@@ -1360,6 +1361,7 @@ function(instance, context) {
       instance.publishState('drop_zone', 'pool');
       instance.publishState('motif_absence', sourceMotif);
       instance.triggerEvent('assignment_removed');
+      instance.data.hasLocalChanges = true;
       dragData = null;
       return;
     }
@@ -1405,6 +1407,7 @@ function(instance, context) {
     instance.publishState('source_zone', sourceZoneName);
     instance.publishState('motif_absence', targetMotif);
     instance.triggerEvent('assignment_changed');
+    instance.data.hasLocalChanges = true;
     dragData = null;
   });
 
@@ -1417,6 +1420,7 @@ function(instance, context) {
     for (var h = 0; h < highlighted.length; h++) { highlighted[h].classList.remove('ph-driver-vehicle'); }
     clearHighlights();
     dragData = null;
+    instance.data.isDragging = false;
   });
 
   // ===========================================
@@ -1455,6 +1459,7 @@ function(instance, context) {
     instance.publishState('drop_zone', 'pool');
     instance.publishState('motif_absence', motif);
     instance.triggerEvent('assignment_removed');
+    instance.data.hasLocalChanges = true;
   });
 
   // ===========================================
