@@ -1,12 +1,12 @@
 function(instance, properties) {
 
   const chantiers = [
-    { name: 'Nouveau A', start: true },
-    { name: 'Nouveau B', start: true },
-    { name: 'Chantier 1', start: false },
-    { name: 'Chantier 2', start: false },
-    { name: 'Chantier 3', start: false },
-    { name: 'Chantier 4', start: false }
+    { name: 'Nouveau A', start: true, livraison: true },
+    { name: 'Nouveau B', start: true, livraison: false },
+    { name: 'Chantier 1', start: false, livraison: true },
+    { name: 'Chantier 2', start: false, livraison: false },
+    { name: 'Chantier 3', start: false, livraison: false },
+    { name: 'Chantier 4', start: false, livraison: false }
   ];
 
   // Fake data for preview
@@ -121,7 +121,24 @@ function(instance, properties) {
     ">${tags}</div>`;
   }
 
-  function renderChantierRow(name, data, isStart) {
+  function renderChantierRow(name, data, isStart, hasLivraison) {
+    const livraisonBadge = hasLivraison
+      ? `<span style="
+          display: inline-flex;
+          align-items: center;
+          gap: 2px;
+          padding: 1px 5px;
+          border-radius: 4px;
+          font-size: 9px;
+          font-weight: 700;
+          white-space: nowrap;
+          background: #FFF7ED;
+          color: #EA580C;
+          border: 1px solid #FDBA7488;
+          line-height: 1.5;
+        ">🚚 Livraison</span>`
+      : '';
+
     return `<div style="
       display: flex;
       align-items: stretch;
@@ -133,15 +150,19 @@ function(instance, properties) {
         min-width: 110px;
         padding: 8px 8px 8px ${isStart ? '9px' : '12px'};
         display: flex;
-        align-items: center;
-        gap: 6px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 3px;
         font-size: 12px;
         font-weight: 600;
         color: #1E293B;
         border-right: 1px solid #E2E8F0;
         background: #FAFBFC;
         ${isStart ? 'border-left: 3px solid #10B981;' : ''}
-      "><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${name}</span><span style="
+      ">
+        <div style="display:flex;align-items:center;gap:6px;width:100%;">
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${name}</span><span style="
         width: 18px; height: 18px; min-width: 18px;
         display: inline-flex; align-items: center; justify-content: center;
         border-radius: 50%; border: 1px solid #CBD5E1;
@@ -154,7 +175,10 @@ function(instance, properties) {
         background: #FFFFFF; color: #64748B;
         font-size: 10px; font-weight: 700; font-style: italic;
         font-family: Georgia, serif; cursor: pointer;
-      ">i</span></div>
+      ">i</span>
+        </div>
+        ${livraisonBadge}
+      </div>
       ${renderDropZone(data.personnel, personnelColor, personnelBg, 'Personnel')}
       ${renderDropZone(data.vehicules, vehiculeColor, vehiculeBg, 'Véhicules')}
       ${renderDropZone(data.soustraitants, soustraitantColor, soustraitantBg, 'Sous-trait.')}
@@ -343,7 +367,7 @@ function(instance, properties) {
 
           <!-- Rows -->
           <div style="flex: 1; overflow-y: auto;">
-            ${chantiers.map(c => renderChantierRow(c.name, planningData[c.name], c.start)).join('')}
+            ${chantiers.map(c => renderChantierRow(c.name, planningData[c.name], c.start, c.livraison)).join('')}
           </div>
         </div>
 
@@ -369,33 +393,68 @@ function(instance, properties) {
           ${absences.map(a => renderAbsenceRow(a.type, a.personnel)).join('')}
         </div>
 
-        <!-- Bureau -->
-        <div style="
-          display: flex;
-          flex-direction: column;
-          border: 1px solid #E2E8F0;
-          border-radius: 8px;
-          overflow: hidden;
-        ">
+        <!-- Bureau + Atelier général (50/50) -->
+        <div style="display: flex; gap: 12px;">
+          <!-- Bureau -->
           <div style="
-            padding: 8px 12px;
-            background: ${bureauBg};
-            border-bottom: 1px solid #E2E8F0;
-            font-size: 11px;
-            font-weight: 600;
-            color: ${bureauColor};
+            flex: 1;
+            min-width: 0;
             display: flex;
-            align-items: center;
-            gap: 6px;
-          ">&#128188; Bureau</div>
+            flex-direction: column;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            overflow: hidden;
+          ">
+            <div style="
+              padding: 8px 12px;
+              background: ${bureauBg};
+              border-bottom: 1px solid #E2E8F0;
+              font-size: 11px;
+              font-weight: 600;
+              color: ${bureauColor};
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            ">&#128188; Bureau</div>
+            <div style="
+              padding: 6px 10px;
+              display: flex;
+              flex-wrap: wrap;
+              gap: 4px;
+              align-items: center;
+              min-height: 34px;
+            ">${bureauPersonnel.map(p => renderTag(p, bureauColor, bureauBg)).join('')}</div>
+          </div>
+          <!-- Atelier général -->
           <div style="
-            padding: 6px 10px;
+            flex: 1;
+            min-width: 0;
             display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            align-items: center;
-            min-height: 34px;
-          ">${bureauPersonnel.map(p => renderTag(p, bureauColor, bureauBg)).join('')}</div>
+            flex-direction: column;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            overflow: hidden;
+          ">
+            <div style="
+              padding: 8px 12px;
+              background: #F5F3FF;
+              border-bottom: 1px solid #E2E8F0;
+              font-size: 11px;
+              font-weight: 600;
+              color: #8B5CF6;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            ">&#128295; Atelier général</div>
+            <div style="
+              padding: 6px 10px;
+              display: flex;
+              flex-wrap: wrap;
+              gap: 4px;
+              align-items: center;
+              min-height: 34px;
+            ">${['C. Michel', 'F. Blanc'].map(p => renderTag(p, atelierColor, atelierBg)).join('')}</div>
+          </div>
         </div>
       </div>
 

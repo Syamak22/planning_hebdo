@@ -31,6 +31,7 @@ function(instance, context) {
       display: flex;
       gap: 12px;
       overflow: hidden;
+      position: relative;
     }
 
     /* --- Main column (grid + absences + bureau) --- */
@@ -215,8 +216,10 @@ function(instance, context) {
       min-width: var(--ph-chantier-col-width, 140px);
       padding: 8px 8px 8px 12px;
       display: flex;
-      align-items: center;
-      gap: 6px;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 3px;
       font-size: 12px;
       font-weight: 600;
       color: #1E293B;
@@ -224,11 +227,34 @@ function(instance, context) {
       background: #FAFBFC;
     }
 
+    .planningHebdo-${instanceId} .ph-cell-chantier-top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+
     .planningHebdo-${instanceId} .ph-chantier-name {
       flex: 1;
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .planningHebdo-${instanceId} .ph-livraison-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      white-space: nowrap;
+      background: #FFF7ED;
+      color: #EA580C;
+      border: 1px solid #FDBA7488;
+      line-height: 1.5;
+      letter-spacing: 0.2px;
     }
 
     .planningHebdo-${instanceId} .ph-info-btn {
@@ -343,6 +369,10 @@ function(instance, context) {
       color: #EF444488;
     }
 
+    .planningHebdo-${instanceId} .ph-empty-label.label-atelier-general {
+      color: #8B5CF688;
+    }
+
     /* --- Absences / Bureau sections --- */
     .planningHebdo-${instanceId} .ph-section {
       flex: none;
@@ -387,14 +417,30 @@ function(instance, context) {
       align-items: center;
     }
 
-    /* --- Bureau section --- */
-    .planningHebdo-${instanceId} .ph-bureau-zone {
+    /* --- Bottom zones (Bureau + Atelier général) --- */
+    .planningHebdo-${instanceId} .ph-bottom-zones {
+      display: flex;
+      gap: 12px;
+      flex: none;
+    }
+
+    .planningHebdo-${instanceId} .ph-bottom-zones .ph-section {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .planningHebdo-${instanceId} .ph-bureau-zone,
+    .planningHebdo-${instanceId} .ph-atelier-general-zone {
       padding: 6px 10px;
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
       align-items: center;
       min-height: 34px;
+    }
+
+    .planningHebdo-${instanceId} .ph-drop-zone.zone-atelier-general {
+      background: #F5F3FF66;
     }
 
     /* --- Resource Panel --- */
@@ -573,6 +619,11 @@ function(instance, context) {
       background: #F0F9FFAA;
     }
 
+    .planningHebdo-${instanceId} .ph-drop-zone.zone-atelier-general.ph-drag-over {
+      outline-color: #8B5CF6;
+      background: #F5F3FFAA;
+    }
+
     .planningHebdo-${instanceId} .ph-drop-zone.zone-absence.ph-drag-over {
       outline-color: #EF4444;
       background: #FEF2F2AA;
@@ -659,12 +710,250 @@ function(instance, context) {
     }
 
     /* (print handled via popup window) */
+
+    /* === SKELETON LOADER === */
+    @keyframes ph-shimmer-${instanceId} {
+      0%   { background-position: -600px 0; }
+      100% { background-position: 600px 0; }
+    }
+
+    .planningHebdo-${instanceId} .ph-skeleton {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 10;
+      display: flex;
+      gap: 12px;
+      background: white;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-pulse {
+      background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+      background-size: 1200px 100%;
+      animation: ph-shimmer-${instanceId} 1.6s ease-in-out infinite;
+      border-radius: 4px;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-grid {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-header {
+      padding: 9px 16px;
+      background: #F8FAFC;
+      border-bottom: 1px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex: none;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-col-hdr {
+      padding: 8px 12px;
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid #E2E8F0;
+      background: #FAFBFC;
+      flex: none;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid #F1F5F9;
+      flex: none;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-row:last-child {
+      border-bottom: none;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-tag {
+      border-radius: 11px;
+      flex: none;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-section {
+      flex: none;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-panel {
+      width: var(--ph-resources-width, 28%);
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-pool-section {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 14px;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-pool-title {
+      border-radius: 3px;
+      margin-bottom: 8px;
+    }
+
+    .planningHebdo-${instanceId} .ph-skel-pool-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .planningHebdo-${instanceId} .ph-conflict-zone {
+      background: #fff8e1;
+      border: 1px solid #f59e0b;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+    .planningHebdo-${instanceId} .ph-conflict-header {
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 4px;
+    }
+    .planningHebdo-${instanceId} .ph-conflict-item {
+      color: #78350f;
+      padding: 2px 0;
+      word-break: break-word;
+    }
+    .planningHebdo-${instanceId} .ph-tag-conflict {
+      background: #fef3c7 !important;
+      border: 1.5px solid #f59e0b !important;
+      color: #92400e !important;
+    }
   `;
   document.head.appendChild(style);
 
   // --- DOM Structure ---
   var container = document.createElement('div');
   container.className = 'planningHebdo-' + instanceId;
+
+  // --- Skeleton loader ---
+  (function() {
+    function sp(w, h, extra) {
+      var el = document.createElement('div');
+      el.className = 'ph-skel-pulse' + (extra ? ' ' + extra : '');
+      el.style.width = w; el.style.height = h; el.style.flexShrink = '0';
+      return el;
+    }
+
+    var skeleton = document.createElement('div');
+    skeleton.className = 'ph-skeleton';
+
+    // Main column
+    var skelMain = document.createElement('div');
+    skelMain.className = 'ph-skel-main';
+
+    // Grid
+    var skelGrid = document.createElement('div');
+    skelGrid.className = 'ph-skel-grid';
+
+    var skelHdr = document.createElement('div');
+    skelHdr.className = 'ph-skel-header';
+    skelHdr.appendChild(sp('28px', '20px'));
+    skelHdr.appendChild(sp('130px', '14px'));
+    skelHdr.appendChild(sp('28px', '20px'));
+    skelGrid.appendChild(skelHdr);
+
+    var skelColHdr = document.createElement('div');
+    skelColHdr.className = 'ph-skel-col-hdr';
+    skelColHdr.appendChild(sp('var(--ph-chantier-col-width, 140px)', '11px'));
+    ['1fr','1fr','1fr','1fr'].forEach(function() {
+      var spacer = document.createElement('div');
+      spacer.style.flex = '1';
+      var inner = sp('60%', '11px');
+      spacer.appendChild(inner);
+      skelColHdr.appendChild(spacer);
+    });
+    skelGrid.appendChild(skelColHdr);
+
+    var tagWidths = [['58px','72px','48px'],['66px','54px','64px'],['48px','70px','56px'],['72px','52px','60px']];
+    tagWidths.forEach(function(tags) {
+      var row = document.createElement('div');
+      row.className = 'ph-skel-row';
+      row.appendChild(sp('var(--ph-chantier-col-width, 140px)', '13px'));
+      tags.forEach(function(w) { row.appendChild(sp(w, '22px', 'ph-skel-tag')); });
+      skelGrid.appendChild(row);
+    });
+
+    skelMain.appendChild(skelGrid);
+
+    // Bottom section (absences/bureau bar)
+    var skelSec = document.createElement('div');
+    skelSec.className = 'ph-skel-section';
+    skelSec.appendChild(sp('70px', '11px'));
+    ['54px','66px','48px'].forEach(function(w) { skelSec.appendChild(sp(w, '22px', 'ph-skel-tag')); });
+    skelMain.appendChild(skelSec);
+
+    skeleton.appendChild(skelMain);
+
+    // Resources panel
+    var skelPanel = document.createElement('div');
+    skelPanel.className = 'ph-skel-panel';
+    [['56px', ['62px','78px','54px','68px','72px']], ['50px', ['66px','54px','70px']], ['62px', ['74px','58px']]].forEach(function(pool) {
+      var sec = document.createElement('div');
+      sec.className = 'ph-skel-pool-section';
+      sec.appendChild(sp(pool[0], '10px', 'ph-skel-pool-title'));
+      var tags = document.createElement('div');
+      tags.className = 'ph-skel-pool-tags';
+      pool[1].forEach(function(w) { tags.appendChild(sp(w, '22px', 'ph-skel-tag')); });
+      sec.appendChild(tags);
+      skelPanel.appendChild(sec);
+    });
+    skeleton.appendChild(skelPanel);
+
+    container.appendChild(skeleton);
+    instance.data.skeleton = skeleton;
+    instance.data.skeletonShownAt = Date.now();
+  })();
+
+  // Skeleton : show (instant) — utilisable depuis les event handlers de navigation
+  instance.data.showSkeleton = function() {
+    var skel = instance.data.skeleton;
+    if (!skel) return;
+    clearTimeout(instance.data.skeletonFallbackTimer);
+    skel.style.transition = 'none';
+    skel.style.opacity = '1';
+    skel.style.display = 'flex';
+    requestAnimationFrame(function() { skel.style.transition = ''; });
+    instance.data.skeletonHidden = false;
+    instance.data.lastSkeletonStableHash = null;
+    instance.data.skeletonDataReadyAt = null;
+  };
 
   // Main column (grid + absences + bureau)
   var mainCol = document.createElement('div');
@@ -722,7 +1011,9 @@ function(instance, context) {
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
       var chantierCell = row.querySelector('.ph-cell-chantier');
-      var chantierName = chantierCell ? chantierCell.querySelector('.ph-chantier-name').textContent.trim() : '';
+      var chantierNameEl = chantierCell ? chantierCell.querySelector('.ph-chantier-name') : null;
+      var chantierName = chantierNameEl ? chantierNameEl.textContent.trim() : '';
+      var hasLivraison = !!(chantierCell && chantierCell.querySelector('.ph-livraison-badge'));
       var isStart = row.classList.contains('ph-row-start');
       var chantierId = row._bubbleObject ? row._bubbleObject.get('_id') : null;
       var commentaire = (chantierId && pMap[chantierId]) ? (pMap[chantierId].commentaire || '') : '';
@@ -733,7 +1024,7 @@ function(instance, context) {
         var tagsHtml = '';
         if (tags.length > 0) {
           for (var t = 0; t < tags.length; t++) {
-            var tagText = tags[t].textContent.replace(/\s*×\s*$/, '').trim();
+            var tagText = (tags[t].firstChild && tags[t].firstChild.nodeType === 3) ? tags[t].firstChild.textContent.trim() : '';
             var tagClass = '';
             if (tags[t].classList.contains('tag-personnel')) tagClass = 'tag-personnel';
             else if (tags[t].classList.contains('tag-vehicule')) tagClass = 'tag-vehicule';
@@ -744,7 +1035,8 @@ function(instance, context) {
         cells += '<td class="cell">' + tagsHtml + '</td>';
       }
       cells += '<td class="cell cell-comment">' + commentaire + '</td>';
-      chantierRowsHtml += '<tr' + (isStart ? ' class="row-start"' : '') + '><td class="cell cell-chantier">' + chantierName + '</td>' + cells + '</tr>';
+      var chantierCellHtml = chantierName + (hasLivraison ? '<br><span class="tag-livraison">&#128666; Livraison</span>' : '');
+      chantierRowsHtml += '<tr' + (isStart ? ' class="row-start"' : '') + '><td class="cell cell-chantier">' + chantierCellHtml + '</td>' + cells + '</tr>';
     }
 
     // --- Build absence rows HTML ---
@@ -757,7 +1049,7 @@ function(instance, context) {
       var tags = zone ? zone.querySelectorAll('.ph-res-tag') : [];
       var tagsHtml = '';
       for (var t = 0; t < tags.length; t++) {
-        var tagText = tags[t].textContent.replace(/\s*×\s*$/, '').trim();
+        var tagText = (tags[t].firstChild && tags[t].firstChild.nodeType === 3) ? tags[t].firstChild.textContent.trim() : '';
         tagsHtml += '<span class="tag tag-personnel">' + tagText + '</span>';
       }
       absenceRowsHtml += '<tr><td class="cell cell-motif">' + motifName + '</td><td class="cell" colspan="5">' + tagsHtml + '</td></tr>';
@@ -767,8 +1059,16 @@ function(instance, context) {
     var bureauTagsHtml = '';
     var bureauTags = instance.data.bureauZone.querySelectorAll('.ph-res-tag');
     for (var t = 0; t < bureauTags.length; t++) {
-      var tagText = bureauTags[t].textContent.replace(/\s*×\s*$/, '').trim();
+      var tagText = (bureauTags[t].firstChild && bureauTags[t].firstChild.nodeType === 3) ? bureauTags[t].firstChild.textContent.trim() : '';
       bureauTagsHtml += '<span class="tag tag-personnel">' + tagText + '</span>';
+    }
+
+    // --- Build atelier général HTML ---
+    var atelierGeneralTagsHtml = '';
+    var atelierGeneralTags = instance.data.atelierGeneralZone.querySelectorAll('.ph-res-tag');
+    for (var t = 0; t < atelierGeneralTags.length; t++) {
+      var tagText = (atelierGeneralTags[t].firstChild && atelierGeneralTags[t].firstChild.nodeType === 3) ? atelierGeneralTags[t].firstChild.textContent.trim() : '';
+      atelierGeneralTagsHtml += '<span class="tag tag-atelier">' + tagText + '</span>';
     }
 
     // --- Full HTML document ---
@@ -790,11 +1090,16 @@ function(instance, context) {
       '.section-title { font-size: 11px; font-weight: 600; padding: 6px; border: 1px solid #ccc; border-bottom: none; margin-top: 12px; }' +
       '.section-title.absence { color: #ef4444; }' +
       '.section-title.bureau { color: #3b82f6; }' +
+      '.section-title.atelier { color: #7c3aed; }' +
       '.bureau-content { padding: 6px; border: 1px solid #ccc; min-height: 24px; display: flex; flex-wrap: wrap; gap: 4px; }' +
       '.tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; border: 1px solid; margin: 1px; }' +
       '.tag-personnel { color: #1d4ed8; border-color: #1d4ed8; background: #eff6ff; }' +
       '.tag-vehicule { color: #15803d; border-color: #15803d; background: #f0fdf4; }' +
       '.tag-soustraitant { color: #c2410c; border-color: #c2410c; background: #fff7ed; }' +
+      '.tag-atelier { color: #6d28d9; border-color: #6d28d9; background: #f5f3ff; }' +
+      '.tag-livraison { display: inline-block; padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 700; color: #ea580c; background: #fff7ed; border: 1px solid #fdba74; margin-top: 2px; }' +
+      '.bottom-sections { display: flex; gap: 16px; margin-top: 12px; }' +
+      '.bottom-section { flex: 1; min-width: 0; }' +
       '@media print { body { padding: 10px; } }' +
       '</style></head><body>' +
       '<div class="header"><span>' + timestamp + '</span><span>Planning - ' + dateStr + '</span></div>' +
@@ -805,8 +1110,16 @@ function(instance, context) {
       '</table>' +
       '<div class="section-title absence">\u26d4 Absences / Indisponibilit\u00e9s</div>' +
       '<table><tbody>' + absenceRowsHtml + '</tbody></table>' +
-      '<div class="section-title bureau">\ud83c\udfe2 Bureau</div>' +
-      '<div class="bureau-content">' + (bureauTagsHtml || '<span style="color:#94a3b8;">Personnel au bureau</span>') + '</div>' +
+      '<div class="bottom-sections">' +
+        '<div class="bottom-section">' +
+          '<div class="section-title bureau">\ud83c\udfe2 Bureau</div>' +
+          '<div class="bureau-content">' + (bureauTagsHtml || '<span style="color:#94a3b8;">Personnel au bureau</span>') + '</div>' +
+        '</div>' +
+        '<div class="bottom-section">' +
+          '<div class="section-title atelier">\ud83d\udd27 Atelier g\u00e9n\u00e9ral</div>' +
+          '<div class="bureau-content">' + (atelierGeneralTagsHtml || '<span style="color:#94a3b8;">Personnel \u00e0 l\u2019atelier</span>') + '</div>' +
+        '</div>' +
+      '</div>' +
       '</body></html>';
 
     var printWindow = window.open('', '_blank');
@@ -926,10 +1239,36 @@ function(instance, context) {
   bureauSection.appendChild(bureauHeader);
   bureauSection.appendChild(bureauZone);
 
+  // --- Atelier général section ---
+  var atelierGeneralSection = document.createElement('div');
+  atelierGeneralSection.className = 'ph-section';
+
+  var atelierGeneralHeader = document.createElement('div');
+  atelierGeneralHeader.className = 'ph-section-header';
+  atelierGeneralHeader.style.background = '#F5F3FF';
+  atelierGeneralHeader.style.color = '#8B5CF6';
+  atelierGeneralHeader.innerHTML = '\u{1F527} Atelier g\u00e9n\u00e9ral';
+
+  var atelierGeneralZone = document.createElement('div');
+  atelierGeneralZone.className = 'ph-atelier-general-zone ph-drop-zone zone-atelier-general';
+  var atelierGeneralEmptyLabel = document.createElement('span');
+  atelierGeneralEmptyLabel.className = 'ph-empty-label label-atelier-general';
+  atelierGeneralEmptyLabel.textContent = 'Personnel \u00e0 l\u2019atelier';
+  atelierGeneralZone.appendChild(atelierGeneralEmptyLabel);
+
+  atelierGeneralSection.appendChild(atelierGeneralHeader);
+  atelierGeneralSection.appendChild(atelierGeneralZone);
+
+  // --- Bottom zones wrapper (50/50) ---
+  var bottomZones = document.createElement('div');
+  bottomZones.className = 'ph-bottom-zones';
+  bottomZones.appendChild(bureauSection);
+  bottomZones.appendChild(atelierGeneralSection);
+
   // Assemble main column
   mainCol.appendChild(grid);
   mainCol.appendChild(absencesSection);
-  mainCol.appendChild(bureauSection);
+  mainCol.appendChild(bottomZones);
 
   // --- Resource Panel ---
   var resources = document.createElement('div');
@@ -990,6 +1329,12 @@ function(instance, context) {
   secSoustraitant.appendChild(labelSoustraitant);
   secSoustraitant.appendChild(poolSoustraitant);
 
+  var conflictZone = document.createElement('div');
+  conflictZone.className = 'ph-conflict-zone';
+  conflictZone.style.display = 'none';
+  instance.data.conflictZone = conflictZone;
+
+  resBody.appendChild(conflictZone);
   resBody.appendChild(secPersonnel);
   resBody.appendChild(secVehicule);
   resBody.appendChild(secSoustraitant);
@@ -1014,6 +1359,7 @@ function(instance, context) {
   instance.data.countSoustraitant = countSoustraitant;
   instance.data.absencesBody = absencesBody;
   instance.data.bureauZone = bureauZone;
+  instance.data.atelierGeneralZone = atelierGeneralZone;
   instance.data.btnDuplicate = btnDuplicate;
   instance.data.instanceId = instanceId;
 
@@ -1026,12 +1372,15 @@ function(instance, context) {
   };
 
   // --- Helper: create a chantier row (now with 4 drop zones) ---
-  instance.data.createRow = function(name) {
+  instance.data.createRow = function(name, hasLivraison) {
     var row = document.createElement('div');
     row.className = 'ph-row';
 
     var cellChantier = document.createElement('div');
     cellChantier.className = 'ph-cell-chantier';
+
+    var topRow = document.createElement('div');
+    topRow.className = 'ph-cell-chantier-top';
 
     var chantierName = document.createElement('span');
     chantierName.className = 'ph-chantier-name';
@@ -1046,9 +1395,17 @@ function(instance, context) {
     infoBtn.className = 'ph-info-btn';
     infoBtn.textContent = 'i';
 
-    cellChantier.appendChild(chantierName);
-    cellChantier.appendChild(commentBtn);
-    cellChantier.appendChild(infoBtn);
+    topRow.appendChild(chantierName);
+    topRow.appendChild(commentBtn);
+    topRow.appendChild(infoBtn);
+    cellChantier.appendChild(topRow);
+
+    if (hasLivraison) {
+      var badge = document.createElement('span');
+      badge.className = 'ph-livraison-badge';
+      badge.textContent = '\uD83D\uDE9A Livraison';
+      cellChantier.appendChild(badge);
+    }
 
     var zonePersonnel = document.createElement('div');
     zonePersonnel.className = 'ph-drop-zone zone-personnel';
@@ -1136,6 +1493,7 @@ function(instance, context) {
     var d = new Date(instance.data.currentDate);
     d.setDate(d.getDate() + delta);
     d.setHours(0, 0, 0, 0);
+    instance.data.showSkeleton();
     resetAllStates();
     instance.publishState('selected_date', d);
     instance.triggerEvent('date_changed');
@@ -1153,6 +1511,7 @@ function(instance, context) {
     var parts = dateInput.value.split('-');
     var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     d.setHours(0, 0, 0, 0);
+    instance.data.showSkeleton();
     resetAllStates();
     instance.publishState('selected_date', d);
     instance.triggerEvent('date_changed');
@@ -1174,6 +1533,7 @@ function(instance, context) {
     // Atelier, bureau, absence accept personnel only
     if (el.classList.contains('zone-atelier')) return 'personnel';
     if (el.classList.contains('zone-bureau')) return 'personnel';
+    if (el.classList.contains('zone-atelier-general')) return 'personnel';
     if (el.classList.contains('zone-absence')) return 'personnel';
     return null;
   }
@@ -1185,6 +1545,7 @@ function(instance, context) {
     if (el.classList.contains('zone-soustraitant')) return 'soustraitant';
     if (el.classList.contains('zone-atelier')) return 'atelier';
     if (el.classList.contains('zone-bureau')) return 'bureau';
+    if (el.classList.contains('zone-atelier-general')) return 'atelier_general';
     if (el.classList.contains('zone-absence')) return 'absence';
     if (el.classList.contains('pool-personnel')) return 'pool';
     if (el.classList.contains('pool-vehicule')) return 'pool';
@@ -1212,6 +1573,10 @@ function(instance, context) {
     else if (zoneName === 'atelier') label.textContent = 'Atelier';
     else if (zoneName === 'bureau') label.textContent = 'Personnel au bureau';
     else if (zoneName === 'absence') label.textContent = '\u2014';
+    else if (zoneName === 'atelier_general') {
+      label.className = 'ph-empty-label label-atelier-general';
+      label.textContent = 'Personnel \u00e0 l\u2019atelier';
+    }
     zone.appendChild(label);
   }
 

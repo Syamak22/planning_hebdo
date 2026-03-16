@@ -38,6 +38,9 @@ function(instance, properties, context) {
   var dataBureauPlanning = properties.data_type_bureau_planning;
   var fieldBureauPersonnel = properties.field_bureau_personnel;
 
+  var dataLivraisonsDuJour = properties.data_type_livraisons_du_jour;
+  var fieldChantierLivraison = properties.field_chantier_planning_atelier;
+
   // --- Recursion protection ---
   if (instance.data.isUpdating) { return; }
   instance.data.isUpdating = true;
@@ -148,6 +151,7 @@ function(instance, properties, context) {
   // STEP 2: READ PLANNING DATA
   // ===========================================
   var planningMap = {};
+  var atelierGeneralPersonnelIds = [];
   var assignedPersonnel = {};
   var assignedVehicule = {};
   var assignedSoustraitant = {};
@@ -186,8 +190,10 @@ function(instance, properties, context) {
     return ids;
   }
 
+  var planningDataReady = false;
   try {
     var planItems = readList(dataPlanning);
+    planningDataReady = true;
     if (planItems) {
       for (var i = 0; i < planItems.length; i++) {
         var planItem = planItems[i];
@@ -196,7 +202,15 @@ function(instance, properties, context) {
         var chId = null;
         if (chRef && typeof chRef.get === 'function') { chId = chRef.get('_id'); }
         else if (typeof chRef === 'string') { chId = chRef; }
-        if (!chId) { continue; }
+        if (!chId) {
+          // Pas de chantier → atelier général
+          var agIds = extractIds(planItem, fieldAtelierPersonnel);
+          for (var j = 0; j < agIds.length; j++) {
+            atelierGeneralPersonnelIds.push(agIds[j]);
+            assignedPersonnel[agIds[j]] = true;
+          }
+          continue;
+        }
         var commentaire = fieldCommentaire ? (planItem.get(fieldCommentaire) || '') : '';
         var entry = {
           personnel: extractIds(planItem, fieldPersonnel),
@@ -267,6 +281,25 @@ function(instance, properties, context) {
   } catch (e) { if (!e.not_ready_key) { console.error('PH bureau planning read:', e); } }
 
   // ===========================================
+  // STEP 2d: READ LIVRAISONS DU JOUR
+  // ===========================================
+  var livraisonChantierIds = {};
+  try {
+    var livraisonItems = readList(dataLivraisonsDuJour);
+    if (livraisonItems && fieldChantierLivraison) {
+      for (var i = 0; i < livraisonItems.length; i++) {
+        var livItem = livraisonItems[i];
+        if (!livItem || typeof livItem.get !== 'function') { continue; }
+        var livChantier = livItem.get(fieldChantierLivraison);
+        var livChantierId = null;
+        if (livChantier && typeof livChantier.get === 'function') { livChantierId = livChantier.get('_id'); }
+        else if (typeof livChantier === 'string') { livChantierId = livChantier; }
+        if (livChantierId) { livraisonChantierIds[livChantierId] = true; }
+      }
+    }
+  } catch (e) { if (!e.not_ready_key) { console.error('PH livraisons read:', e); } }
+
+  // ===========================================
   // STEP 3: HASH & CHANGE DETECTION — OPTIMISTIC UI
   //
   // On sépare le hash en deux parties :
@@ -293,6 +326,7 @@ function(instance, properties, context) {
   structuralHash += '|vi:' + Object.keys(vehiculeIndisponibleSet).sort().join(',');
   var absKeys = Object.keys(absenceMap).sort();
   structuralHash += '|abst:' + absKeys.join(',');
+  structuralHash += '|liv:' + Object.keys(livraisonChantierIds).sort().join(',');
 
   var assignmentHash = 'pl:' + Object.keys(planningMap).sort().length;
   var planKeys = Object.keys(planningMap).sort();
@@ -304,6 +338,7 @@ function(instance, properties, context) {
     assignmentHash += '|' + absKeys[i] + '=' + absenceMap[absKeys[i]].join(',');
   }
   assignmentHash += '|bur:' + bureauPersonnelIds.sort().join(',');
+  assignmentHash += '|ag:' + atelierGeneralPersonnelIds.slice().sort().join(',');
 
   var fullHash = structuralHash + '||' + assignmentHash;
 
@@ -342,6 +377,56 @@ function(instance, properties, context) {
 
   instance.data.planningMap = planningMap;
 
+  // --- Calcul des conflits d'assignation (tous les emplacements) ---
+  var chantierNameMap = {};
+  if (chantierItems) {
+    for (var cni = 0; cni < chantierItems.length; cni++) {
+      var cniItem = chantierItems[cni];
+      if (cniItem && typeof cniItem.get === 'function') {
+        chantierNameMap[cniItem.get('_id')] = (nameChantier ? cniItem.get(nameChantier) : null) || '\u2014';
+      }
+    }
+  }
+
+  var personnelLocations = {}; // pid → [location string, ...]
+
+  var chantierConflictKeys = Object.keys(planningMap);
+  for (var cci = 0; cci < chantierConflictKeys.length; cci++) {
+    var ccId = chantierConflictKeys[cci];
+    var pmEntry = planningMap[ccId];
+    var cLabel = chantierNameMap[ccId] || '\u2014';
+    var ccIds = pmEntry.personnel.concat(pmEntry.atelier || []);
+    for (var cpi = 0; cpi < ccIds.length; cpi++) {
+      if (!personnelLocations[ccIds[cpi]]) { personnelLocations[ccIds[cpi]] = []; }
+      personnelLocations[ccIds[cpi]].push(cLabel);
+    }
+  }
+
+  var absConflictKeys = Object.keys(absenceMap);
+  for (var abi = 0; abi < absConflictKeys.length; abi++) {
+    var absTypeName = absConflictKeys[abi];
+    var abIds = absenceMap[absTypeName];
+    for (var abii = 0; abii < abIds.length; abii++) {
+      if (!personnelLocations[abIds[abii]]) { personnelLocations[abIds[abii]] = []; }
+      personnelLocations[abIds[abii]].push(absTypeName);
+    }
+  }
+
+  for (var bii = 0; bii < bureauPersonnelIds.length; bii++) {
+    if (!personnelLocations[bureauPersonnelIds[bii]]) { personnelLocations[bureauPersonnelIds[bii]] = []; }
+    personnelLocations[bureauPersonnelIds[bii]].push('Bureau');
+  }
+
+  for (var agii = 0; agii < atelierGeneralPersonnelIds.length; agii++) {
+    if (!personnelLocations[atelierGeneralPersonnelIds[agii]]) { personnelLocations[atelierGeneralPersonnelIds[agii]] = []; }
+    personnelLocations[atelierGeneralPersonnelIds[agii]].push('Atelier g\u00e9n.');
+  }
+
+  var conflictPersonnelIds = {};
+  for (var cpid in personnelLocations) {
+    if (personnelLocations[cpid].length >= 2) { conflictPersonnelIds[cpid] = true; }
+  }
+
   // ===========================================
   // STEP 4: BUILD CHANTIER ROWS + ASSIGNMENTS
   // ===========================================
@@ -368,6 +453,9 @@ function(instance, properties, context) {
           var tag = instance.data.createTag(res.name, type, true, isUnavailable);
           tag._bubbleObject = res.object;
           tag._resourceId = ids[k];
+          if (type === 'personnel' && conflictPersonnelIds[ids[k]]) {
+            tag.classList.add('ph-tag-conflict');
+          }
           zone.appendChild(tag);
         }
       }
@@ -377,13 +465,14 @@ function(instance, properties, context) {
       var item = chantierItems[i];
       if (!item || typeof item.get !== 'function') { continue; }
       var displayName = nameChantier ? item.get(nameChantier) : '\u2014';
-      var row = instance.data.createRow(displayName || '\u2014');
+      var chantierId = item.get('_id');
+      var hasLivraison = !!(chantierId && livraisonChantierIds[chantierId]);
+      var row = instance.data.createRow(displayName || '\u2014', hasLivraison);
       row._bubbleObject = item;
       if (fieldDateDebut && dayDate) {
         var startDate = item.get(fieldDateDebut);
         if (isSameDay(startDate, dayDate)) { row.classList.add('ph-row-start'); }
       }
-      var chantierId = item.get('_id');
       if (chantierId && planningMap[chantierId]) {
         var assignments = planningMap[chantierId];
         var zones = row.querySelectorAll('.ph-drop-zone');
@@ -422,6 +511,7 @@ function(instance, properties, context) {
             var tag = instance.data.createTag(res.name, 'personnel', true);
             tag._bubbleObject = res.object;
             tag._resourceId = absPersonnelIds[j];
+            if (conflictPersonnelIds[absPersonnelIds[j]]) { tag.classList.add('ph-tag-conflict'); }
             zone.appendChild(tag);
           }
         }
@@ -443,6 +533,7 @@ function(instance, properties, context) {
         var tag = instance.data.createTag(res.name, 'personnel', true);
         tag._bubbleObject = res.object;
         tag._resourceId = bureauPersonnelIds[i];
+        if (conflictPersonnelIds[bureauPersonnelIds[i]]) { tag.classList.add('ph-tag-conflict'); }
         bureauZone.appendChild(tag);
       }
     }
@@ -451,6 +542,30 @@ function(instance, properties, context) {
     emptyLabel.className = 'ph-empty-label label-bureau';
     emptyLabel.textContent = 'Personnel au bureau';
     bureauZone.appendChild(emptyLabel);
+  }
+
+  // ===========================================
+  // STEP 4d: BUILD ATELIER GÉNÉRAL ZONE
+  // ===========================================
+  var atelierGeneralZone = instance.data.atelierGeneralZone;
+  atelierGeneralZone.innerHTML = '';
+
+  if (atelierGeneralPersonnelIds.length > 0) {
+    for (var i = 0; i < atelierGeneralPersonnelIds.length; i++) {
+      var res = personnelById[atelierGeneralPersonnelIds[i]];
+      if (res) {
+        var tag = instance.data.createTag(res.name, 'personnel', true);
+        tag._bubbleObject = res.object;
+        tag._resourceId = atelierGeneralPersonnelIds[i];
+        if (conflictPersonnelIds[atelierGeneralPersonnelIds[i]]) { tag.classList.add('ph-tag-conflict'); }
+        atelierGeneralZone.appendChild(tag);
+      }
+    }
+  } else {
+    var emptyLabel = document.createElement('span');
+    emptyLabel.className = 'ph-empty-label label-atelier-general';
+    emptyLabel.textContent = 'Personnel \u00e0 l\u2019atelier';
+    atelierGeneralZone.appendChild(emptyLabel);
   }
 
   // ===========================================
@@ -478,6 +593,72 @@ function(instance, properties, context) {
 
   populatePool(instance.data.poolSoustraitant, soustraitantById, assignedSoustraitant, 'soustraitant');
   if (instance.data.countSoustraitant) { instance.data.countSoustraitant.textContent = instance.data.poolSoustraitant.querySelectorAll('.ph-res-tag').length || ''; }
+
+  // --- Zone alerte conflits ---
+  var conflictZoneEl = instance.data.conflictZone;
+  if (conflictZoneEl) {
+    var conflictIds = Object.keys(conflictPersonnelIds);
+    if (conflictIds.length === 0) {
+      conflictZoneEl.style.display = 'none';
+    } else {
+      conflictZoneEl.innerHTML = '';
+      var hdr = document.createElement('div');
+      hdr.className = 'ph-conflict-header';
+      hdr.textContent = '\u26a0\ufe0f ' + conflictIds.length + ' conflit' + (conflictIds.length > 1 ? 's' : '');
+      conflictZoneEl.appendChild(hdr);
+      for (var cIdx = 0; cIdx < conflictIds.length; cIdx++) {
+        var cId = conflictIds[cIdx];
+        var pRes = personnelById[cId];
+        if (!pRes) { continue; }
+        var locations = personnelLocations[cId] || [];
+        var desc = locations.join(' \u00b7 ');
+        var cItem = document.createElement('div');
+        cItem.className = 'ph-conflict-item';
+        cItem.textContent = pRes.name + ' \u2014 ' + desc;
+        conflictZoneEl.appendChild(cItem);
+      }
+      conflictZoneEl.style.display = 'block';
+    }
+  }
+
+  // --- Hide skeleton : stabilité données sur 2 updates consécutifs + délai minimum 600ms ---
+  if (instance.data.skeleton && !instance.data.skeletonHidden && chantierItems !== null && planningDataReady) {
+    // Horodater le premier update avec données prêtes
+    if (!instance.data.skeletonDataReadyAt) {
+      instance.data.skeletonDataReadyAt = Date.now();
+    }
+    var elapsed = Date.now() - instance.data.skeletonDataReadyAt;
+    var minDelayOk = elapsed >= 600;
+
+    if (instance.data.lastSkeletonStableHash === fullHash && minDelayOk) {
+      // Même hash 2 updates de suite + délai minimum écoulé → cacher
+      instance.data.skeletonHidden = true;
+      clearTimeout(instance.data.skeletonFallbackTimer);
+      var _skel = instance.data.skeleton;
+      _skel.style.opacity = '0';
+      setTimeout(function() { if (_skel) { _skel.style.display = 'none'; } }, 380);
+    } else if (instance.data.lastSkeletonStableHash === fullHash && !minDelayOk) {
+      // Même hash mais trop tôt → attendre que le délai soit écoulé
+      clearTimeout(instance.data.skeletonFallbackTimer);
+      var _remainingDelay = 600 - elapsed;
+      instance.data.skeletonFallbackTimer = setTimeout(function() {
+        if (!instance.data.skeleton || instance.data.skeletonHidden) return;
+        instance.data.skeletonHidden = true;
+        instance.data.skeleton.style.opacity = '0';
+        setTimeout(function() { if (instance.data.skeleton) { instance.data.skeleton.style.display = 'none'; } }, 380);
+      }, _remainingDelay);
+    } else {
+      // Nouveau hash → noter le hash, attendre le suivant (fallback 700ms)
+      instance.data.lastSkeletonStableHash = fullHash;
+      clearTimeout(instance.data.skeletonFallbackTimer);
+      instance.data.skeletonFallbackTimer = setTimeout(function() {
+        if (!instance.data.skeleton || instance.data.skeletonHidden) return;
+        instance.data.skeletonHidden = true;
+        instance.data.skeleton.style.opacity = '0';
+        setTimeout(function() { if (instance.data.skeleton) { instance.data.skeleton.style.display = 'none'; } }, 380);
+      }, 700);
+    }
+  }
 
   } finally {
     instance.data.isUpdating = false;
