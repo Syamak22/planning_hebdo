@@ -1713,10 +1713,17 @@ function(instance, context) {
       var tag = dragData.tag;
       tag.classList.remove('ph-dragging');
       var btn = tag.querySelector('.ph-tag-remove');
-      if (btn) btn.remove();
-      zone.appendChild(tag);
-      updatePoolCount(dragData.type);
+      if (btn) { btn.remove(); }
+      tag.remove();
       maybeRestoreLabel(dragData.sourceZone);
+
+      if (dragData.type === 'personnel' && isPersonnelAssignedElsewhere(dragData.resourceId, tag)) {
+        // Encore assigné ailleurs → ne pas remettre dans le pool
+      } else {
+        zone.appendChild(tag);
+        updatePoolCount(dragData.type);
+      }
+      if (dragData.type === 'personnel') { instance.data.rebuildConflictZone(); }
 
       resetAllStates();
       instance.publishState('resource_type', dragData.type);
@@ -1811,10 +1818,16 @@ function(instance, context) {
     var motif = (absRow && absRow._motifName) ? absRow._motifName : null;
 
     btn.remove();
-    var pool = getPool(type);
-    if (pool) { pool.appendChild(tag); updatePoolCount(type); }
-
+    tag.remove();
     maybeRestoreLabel(zone);
+
+    if (type === 'personnel' && isPersonnelAssignedElsewhere(tag._resourceId, tag)) {
+      // Encore assigné ailleurs → ne pas remettre dans le pool
+    } else {
+      var pool = getPool(type);
+      if (pool) { pool.appendChild(tag); updatePoolCount(type); }
+    }
+    if (type === 'personnel') { instance.data.rebuildConflictZone(); }
 
     resetAllStates();
     instance.publishState('resource_type', type);
@@ -1856,6 +1869,99 @@ function(instance, context) {
     instance.publishState('selected_chantier', row._bubbleObject);
     instance.triggerEvent('chantier_info_clicked');
   });
+
+  // ===========================================
+  // REBUILD CONFLICT ZONE (après actions optimistic)
+  // ===========================================
+  instance.data.rebuildConflictZone = function() {
+    var locMap = {};
+
+    var rows = instance.data.rowsContainer.querySelectorAll('.ph-row');
+    for (var i = 0; i < rows.length; i++) {
+      var chNameEl = rows[i].querySelector('.ph-chantier-name');
+      var cLabel = chNameEl ? chNameEl.textContent.trim() : '\u2014';
+      var tags = rows[i].querySelectorAll('.ph-drop-zone .ph-res-tag.tag-personnel');
+      for (var j = 0; j < tags.length; j++) {
+        var pid = tags[j]._resourceId;
+        if (!pid) { continue; }
+        if (!locMap[pid]) { locMap[pid] = []; }
+        locMap[pid].push(cLabel);
+      }
+    }
+
+    var absRows = instance.data.absencesBody.querySelectorAll('.ph-absence-row');
+    for (var i = 0; i < absRows.length; i++) {
+      var motif = absRows[i]._motifName || 'Absence';
+      var tags = absRows[i].querySelectorAll('.ph-drop-zone .ph-res-tag.tag-personnel');
+      for (var j = 0; j < tags.length; j++) {
+        var pid = tags[j]._resourceId;
+        if (!pid) { continue; }
+        if (!locMap[pid]) { locMap[pid] = []; }
+        locMap[pid].push(motif);
+      }
+    }
+
+    var bureauTags = instance.data.bureauZone.querySelectorAll('.ph-res-tag.tag-personnel');
+    for (var j = 0; j < bureauTags.length; j++) {
+      var pid = bureauTags[j]._resourceId;
+      if (!pid) { continue; }
+      if (!locMap[pid]) { locMap[pid] = []; }
+      locMap[pid].push('Bureau');
+    }
+
+    var agTags = instance.data.atelierGeneralZone.querySelectorAll('.ph-res-tag.tag-personnel');
+    for (var j = 0; j < agTags.length; j++) {
+      var pid = agTags[j]._resourceId;
+      if (!pid) { continue; }
+      if (!locMap[pid]) { locMap[pid] = []; }
+      locMap[pid].push('Atelier g\u00e9n.');
+    }
+
+    var newConflicts = {};
+    for (var cpid in locMap) { if (locMap[cpid].length >= 2) { newConflicts[cpid] = true; } }
+
+    // Mettre à jour les classes sur tous les tags non-pool
+    var allTags = instance.data.container.querySelectorAll('.ph-res-tag.tag-personnel');
+    for (var i = 0; i < allTags.length; i++) {
+      var t = allTags[i];
+      if (t.closest('.ph-res-pool')) { t.classList.remove('ph-tag-conflict'); continue; }
+      if (newConflicts[t._resourceId]) { t.classList.add('ph-tag-conflict'); } else { t.classList.remove('ph-tag-conflict'); }
+    }
+
+    // Reconstruire la zone d'alerte
+    var cZone = instance.data.conflictZone;
+    if (!cZone) { return; }
+    var conflictIds = Object.keys(newConflicts);
+    if (conflictIds.length === 0) {
+      cZone.style.display = 'none';
+    } else {
+      cZone.innerHTML = '';
+      var hdr = document.createElement('div');
+      hdr.className = 'ph-conflict-header';
+      hdr.textContent = '\u26a0\ufe0f ' + conflictIds.length + ' conflit' + (conflictIds.length > 1 ? 's' : '');
+      cZone.appendChild(hdr);
+      var names = instance.data.personnelNamesById || {};
+      for (var cIdx = 0; cIdx < conflictIds.length; cIdx++) {
+        var cId = conflictIds[cIdx];
+        var cItem = document.createElement('div');
+        cItem.className = 'ph-conflict-item';
+        cItem.textContent = (names[cId] || cId) + ' \u2014 ' + locMap[cId].join(' \u00b7 ');
+        cZone.appendChild(cItem);
+      }
+      cZone.style.display = 'block';
+    }
+  };
+
+  // Helper interne : est-ce que ce personnel est encore assigné ailleurs (hors pool) ?
+  function isPersonnelAssignedElsewhere(pid, excludeTag) {
+    var allTags = instance.data.container.querySelectorAll('.ph-res-tag.tag-personnel');
+    for (var k = 0; k < allTags.length; k++) {
+      if (allTags[k] === excludeTag) { continue; }
+      if (allTags[k]._resourceId !== pid) { continue; }
+      if (!allTags[k].closest('.ph-res-pool')) { return true; }
+    }
+    return false;
+  }
 
   // Append to canvas
   instance.canvas.append(container);

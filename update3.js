@@ -377,6 +377,10 @@ function(instance, properties, context) {
 
   instance.data.planningMap = planningMap;
 
+  // Noms du personnel accessibles depuis initialize3.js (rebuildConflictZone)
+  instance.data.personnelNamesById = {};
+  for (var pnKey in personnelById) { instance.data.personnelNamesById[pnKey] = personnelById[pnKey].name; }
+
   // --- Calcul des conflits d'assignation (tous les emplacements) ---
   var chantierNameMap = {};
   if (chantierItems) {

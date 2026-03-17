@@ -193,3 +193,54 @@ tag._resourceId   = id;          // _id string pour les lookups
 var obj = tag._bubbleObject;     // → passer à publishState directement
 var id  = tag._resourceId;       // → chercher dans les maps
 ```
+
+---
+
+## 11. Skeleton loader — le faux stable de hash au démarrage
+
+### Le piège
+
+Bubble appelle `update.js` plusieurs fois très rapidement au chargement de la page, avec des données partiellement vides. Si le skeleton se cache dès que le hash est identique sur 2 appels consécutifs, il peut disparaître alors que les vraies données ne sont pas encore arrivées — l'utilisateur voit brièvement un DOM vide.
+
+**Cause :** deux updates avec données vides → hash `""` stable → skeleton masqué → third update avec vraies données → DOM reconstruit → flash visible.
+
+### La règle
+
+Ne jamais masquer le skeleton uniquement sur la stabilité du hash. Ajouter un **délai minimum** depuis le premier appel où les données semblent prêtes.
+
+### Les 3 gardes avant de masquer
+
+1. Les données sont marquées "prêtes" (ex. un boolean Bubble, ou la liste principale est non-null)
+2. Le hash est identique sur 2 appels consécutifs
+3. Au moins N ms se sont écoulés depuis la condition 1 (ex. 600ms)
+
+Si les conditions 1+2 sont vraies mais pas 3 → `setTimeout` pour le temps restant.
+Si le hash change à chaque update (données qui arrivent progressivement) → timer de fallback de 700ms qui force le masquage.
+
+→ Voir `patterns.md` section 10 pour le code complet.
+
+---
+
+## 12. Optimistic UI — état dérivé orphelin
+
+### Le piège
+
+Dans un plugin avec beaucoup d'interactions (drag & drop, suppressions, déplacements), on sauvegarde vers Bubble après l'action utilisateur mais on veut que l'UI réagisse immédiatement. Pour éviter que le prochain `update.js` écrase les changements locaux avant que Bubble ait confirmé, on pose un flag `hasLocalChanges = true` qui court-circuite le hash check et le rebuild complet.
+
+**Conséquence :** tout état calculé à partir des données dans `update.js` (compteurs, badges, zones d'alerte, classes CSS conditionnelles) n'est **plus rafraîchi** jusqu'au prochain rebuild complet.
+
+### La règle
+
+Chaque fois qu'une action locale modifie le DOM de façon à impacter un état dérivé, appeler manuellement un helper de recalcul.
+
+### Pattern : `rebuildXxx()` dans `instance.data`
+
+Créer dans `initialize.js` un helper qui scanne le **DOM courant comme source de vérité** (et non les données Bubble) pour recalculer l'état dérivé et mettre à jour l'affichage. Le stocker dans `instance.data` pour le rendre accessible depuis les event handlers.
+
+**Ce helper ne doit jamais accéder aux données Bubble** (variables locales d'`update.js`) — uniquement au DOM et à `instance.data`.
+
+→ Voir `patterns.md` section 11 pour le code complet.
+
+### Quand ne pas utiliser ce pattern
+
+Si le plugin n'a pas d'optimistic UI (chaque action déclenche immédiatement un `publishState` qui force un rebuild), le helper `rebuildXxx()` n'est pas nécessaire — `update.js` recalcule tout depuis les données Bubble à chaque cycle.

@@ -240,3 +240,146 @@ var vehiculeIds = instance.data.conducteurToVehiculeIds[personnelId] || [];
 - `update.js` lit les données Bubble, met à jour le DOM via `instance.data`
 - Ne jamais recréer le DOM dans `update.js` si ce n'est pas nécessaire (hash check)
 - Les fonctions helpers (`createTag`, `formatDate`, etc.) sont créées dans `initialize.js` et stockées dans `instance.data` pour être disponibles dans `update.js`
+
+---
+
+## 10. Skeleton loader — masquage fiable au chargement
+
+### Le problème
+
+Bubble envoie souvent **2 ou 3 appels rapides à `update.js`** au démarrage, avec des données partiellement vides ou incomplètes. Si le skeleton se cache dès que le hash est "stable" sur 2 appels consécutifs, il peut disparaître avant que les vraies données soient arrivées — l'utilisateur voit un flash de DOM vide.
+
+### La solution : 3 conditions combinées
+
+Le skeleton ne se cache que si **les 3 conditions sont vraies simultanément** :
+1. Les données sont "prêtes" (une flag ou un champ indique que la source est chargée)
+2. Le hash est **identique sur 2 appels consécutifs** (stabilité)
+3. Un **délai minimum** s'est écoulé depuis que les données sont "prêtes" (ex. 600ms)
+
+Un **timer de fallback** (ex. 700ms) force le masquage si les conditions 1+3 ne se produisent jamais (données vides légitimes).
+
+### Pattern complet dans `update.js`
+
+```js
+// En haut d'update.js, AVANT le hash check
+if (instance.data.skeleton && !instance.data.skeletonHidden && dataIsReady) {
+
+  // Enregistrer le moment où les données sont devenues prêtes
+  if (!instance.data.skeletonDataReadyAt) {
+    instance.data.skeletonDataReadyAt = Date.now();
+  }
+
+  var elapsed = Date.now() - instance.data.skeletonDataReadyAt;
+  var minDelayOk = elapsed >= 600;
+
+  if (instance.data.lastSkeletonStableHash === fullHash && minDelayOk) {
+    // ✓ 2 hashes identiques + délai minimum → masquer maintenant
+    instance.data.skeletonHidden = true;
+    clearTimeout(instance.data.skeletonFallbackTimer);
+    var _skel = instance.data.skeleton;
+    _skel.style.opacity = '0';
+    setTimeout(function() { if (_skel) { _skel.style.display = 'none'; } }, 380);
+
+  } else if (instance.data.lastSkeletonStableHash === fullHash && !minDelayOk) {
+    // ✓ 2 hashes identiques mais trop tôt → attendre le temps restant
+    clearTimeout(instance.data.skeletonFallbackTimer);
+    var _remaining = 600 - elapsed;
+    instance.data.skeletonFallbackTimer = setTimeout(function() {
+      if (!instance.data.skeleton || instance.data.skeletonHidden) { return; }
+      instance.data.skeletonHidden = true;
+      instance.data.skeleton.style.opacity = '0';
+      setTimeout(function() { if (instance.data.skeleton) { instance.data.skeleton.style.display = 'none'; } }, 380);
+    }, _remaining);
+
+  } else {
+    // Hash différent → mémoriser + armer le fallback 700ms
+    instance.data.lastSkeletonStableHash = fullHash;
+    clearTimeout(instance.data.skeletonFallbackTimer);
+    instance.data.skeletonFallbackTimer = setTimeout(function() {
+      if (!instance.data.skeleton || instance.data.skeletonHidden) { return; }
+      instance.data.skeletonHidden = true;
+      instance.data.skeleton.style.opacity = '0';
+      setTimeout(function() { if (instance.data.skeleton) { instance.data.skeleton.style.display = 'none'; } }, 380);
+    }, 700);
+  }
+}
+```
+
+### Reset dans `showSkeleton()`
+
+Quand on réaffiche le skeleton (ex. changement de date), réinitialiser tous les états :
+
+```js
+instance.data.showSkeleton = function() {
+  // ... afficher le skeleton ...
+  instance.data.skeletonHidden = false;
+  instance.data.lastSkeletonStableHash = null;
+  instance.data.skeletonDataReadyAt = null;   // ← obligatoire
+  clearTimeout(instance.data.skeletonFallbackTimer);
+};
+```
+
+---
+
+## 11. Optimistic UI — garder l'état dérivé à jour
+
+### Le contexte
+
+Dans un plugin avec interactions immédiates (drag & drop, boutons d'action), on bloque souvent le rebuild complet via un flag `hasLocalChanges` pour éviter d'écraser les changements locaux de l'utilisateur avant que Bubble ait sauvegardé. Mais cela crée un problème : tout **état dérivé calculé à partir des données** (compteurs, badges, zones d'alerte, classes CSS calculées) n'est plus mis à jour automatiquement.
+
+### Principe
+
+Quand `hasLocalChanges` est actif, le DOM devient la **source de vérité**. Il faut des helpers qui **scannent le DOM courant** pour recalculer l'état dérivé, et les appeler manuellement après chaque action locale.
+
+### Pattern : helper `rebuildXxx()` dans `instance.data`
+
+Créer dans `initialize.js` une fonction stockée dans `instance.data` qui :
+1. Scanne le DOM pour collecter l'état courant
+2. Recalcule les valeurs dérivées
+3. Met à jour l'affichage
+
+```js
+// Dans initialize.js, avant instance.data.initialized = true
+instance.data.rebuildSummary = function() {
+
+  // 1. Scanner le DOM pour collecter l'état courant
+  var countByCategory = {};
+  var items = instance.data.container.querySelectorAll('.ph-item');
+  for (var i = 0; i < items.length; i++) {
+    var cat = items[i]._category;
+    if (!cat) { continue; }
+    countByCategory[cat] = (countByCategory[cat] || 0) + 1;
+  }
+
+  // 2. Recalculer les valeurs dérivées
+  var total = 0;
+  for (var c in countByCategory) { total += countByCategory[c]; }
+
+  // 3. Mettre à jour l'affichage
+  instance.data.totalBadge.textContent = total;
+
+  // Mettre à jour les classes CSS conditionnelles
+  var allItems = instance.data.container.querySelectorAll('.ph-item');
+  for (var j = 0; j < allItems.length; j++) {
+    var pid = allItems[j]._resourceId;
+    if (countByCategory[pid] >= 2) {
+      allItems[j].classList.add('ph-item-conflict');
+    } else {
+      allItems[j].classList.remove('ph-item-conflict');
+    }
+  }
+};
+
+// Appeler dans les handlers d'action locale :
+removeBtn.addEventListener('click', function() {
+  tag.remove();
+  instance.data.rebuildSummary();   // ← recalcul immédiat
+});
+```
+
+### Règles d'application
+
+- Créer le helper dans `initialize.js`, le stocker dans `instance.data` pour qu'il soit accessible depuis les event handlers.
+- L'appeler **après chaque mutation locale du DOM** qui affecte l'état dérivé.
+- Dans `update.js`, quand `hasLocalChanges` est `false` (rebuild normal), le helper n'est pas nécessaire — le DOM est reconstruit intégralement et l'état dérivé recalculé depuis les données Bubble.
+- Le helper **ne doit pas accéder aux données Bubble** (variables locales d'`update.js`) — uniquement au DOM et à `instance.data`.
