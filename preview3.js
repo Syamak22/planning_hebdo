@@ -371,28 +371,6 @@ function(instance, properties) {
           </div>
         </div>
 
-        <!-- Absences / Indisponibilités -->
-        <div style="
-          display: flex;
-          flex-direction: column;
-          border: 1px solid #E2E8F0;
-          border-radius: 8px;
-          overflow: hidden;
-        ">
-          <div style="
-            padding: 8px 12px;
-            background: ${absenceBg};
-            border-bottom: 1px solid #E2E8F0;
-            font-size: 11px;
-            font-weight: 600;
-            color: ${absenceColor};
-            display: flex;
-            align-items: center;
-            gap: 6px;
-          ">&#128683; Absences / Indisponibilités</div>
-          ${absences.map(a => renderAbsenceRow(a.type, a.personnel)).join('')}
-        </div>
-
         <!-- Bureau + Atelier général (50/50) -->
         <div style="display: flex; gap: 12px;">
           <!-- Bureau -->
@@ -455,6 +433,28 @@ function(instance, properties) {
               min-height: 34px;
             ">${['C. Michel', 'F. Blanc'].map(p => renderTag(p, atelierColor, atelierBg)).join('')}</div>
           </div>
+        </div>
+
+        <!-- Absences / Indisponibilités -->
+        <div style="
+          display: flex;
+          flex-direction: column;
+          border: 1px solid #E2E8F0;
+          border-radius: 8px;
+          overflow: hidden;
+        ">
+          <div style="
+            padding: 8px 12px;
+            background: ${absenceBg};
+            border-bottom: 1px solid #E2E8F0;
+            font-size: 11px;
+            font-weight: 600;
+            color: ${absenceColor};
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          ">&#128683; Absences / Indisponibilités</div>
+          ${absences.map(a => renderAbsenceRow(a.type, a.personnel)).join('')}
         </div>
       </div>
 

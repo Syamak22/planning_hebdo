@@ -1267,8 +1267,8 @@ function(instance, context) {
 
   // Assemble main column
   mainCol.appendChild(grid);
-  mainCol.appendChild(absencesSection);
   mainCol.appendChild(bottomZones);
+  mainCol.appendChild(absencesSection);
 
   // --- Resource Panel ---
   var resources = document.createElement('div');
