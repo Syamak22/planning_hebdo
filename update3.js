@@ -30,16 +30,23 @@ function(instance, properties, context) {
   var fieldAtelierPersonnel = properties.field_atelier_personnel;
   var fieldCommentaire = properties.field_commentaire;
 
-  var dataAbsenceTypes = properties.data_type_absence_types;
+  var dataAbsenceMotifs = properties.data_type_absence_motifs;
   var dataAbsencePlanning = properties.data_type_absence_planning;
-  var fieldAbsenceType = properties.field_absence_type;
+  var fieldAbsenceMotif = properties.field_absence_motif;
   var fieldAbsencePersonnel = properties.field_absence_personnel;
 
   var dataBureauPlanning = properties.data_type_bureau_planning;
   var fieldBureauPersonnel = properties.field_bureau_personnel;
 
+  var dataAtelierPlanning = properties.data_type_atelier_planning;
+  var fieldAtelierGeneralPersonnel = properties.field_atelier_general_personnel;
+
   var dataLivraisonsDuJour = properties.data_type_livraisons_du_jour;
   var fieldChantierLivraison = properties.field_chantier_planning_atelier;
+
+  var expandGridHeight = properties.expand_grid_height;
+  var isEditable = properties.editable !== false;
+  var isJourOff = properties.jour_off === true;
 
   // --- Recursion protection ---
   if (instance.data.isUpdating) { return; }
@@ -48,6 +55,48 @@ function(instance, properties, context) {
   try {
 
   if (!instance.data.initialized) { return; }
+
+  // Recalculate height each render — getBoundingClientRect() is only reliable when the element is visible
+  if (instance.data.setCanvasHeight) { instance.data.setCanvasHeight(); }
+
+  // --- Editable mode (before hash check) ---
+  if (instance.data.container) {
+    if (isEditable) {
+      instance.data.container.classList.remove('ph-readonly');
+    } else {
+      instance.data.container.classList.add('ph-readonly');
+    }
+  }
+
+  // --- Jour off (before hash check) ---
+  if (instance.data.container && instance.data.jourOffBadge) {
+    if (isJourOff) {
+      instance.data.container.classList.add('ph-jour-off');
+      instance.data.jourOffBadge.classList.add('active');
+    } else {
+      instance.data.container.classList.remove('ph-jour-off');
+      instance.data.jourOffBadge.classList.remove('active');
+    }
+  }
+
+  // --- Expand grid height (before hash check) ---
+  if (instance.data.grid && instance.data.mainCol && instance.data.rowsContainer) {
+    if (expandGridHeight) {
+      instance.data.mainCol.style.overflow = 'visible';
+      instance.data.grid.style.flex = 'none';
+      instance.data.grid.style.overflow = 'visible';
+      instance.data.rowsContainer.style.flex = 'none';
+      instance.data.rowsContainer.style.minHeight = 'unset';
+      instance.data.rowsContainer.style.overflowY = 'visible';
+    } else {
+      instance.data.mainCol.style.overflow = '';
+      instance.data.grid.style.flex = '';
+      instance.data.grid.style.overflow = '';
+      instance.data.rowsContainer.style.flex = '';
+      instance.data.rowsContainer.style.minHeight = '';
+      instance.data.rowsContainer.style.overflowY = '';
+    }
+  }
 
   // --- Layout CSS variables (before hash check) ---
   if (instance.data.container) {
@@ -84,7 +133,7 @@ function(instance, properties, context) {
 
   var chantierItems = null;
   try { chantierItems = readList(dataChantier); }
-  catch (e) { if (!e.not_ready_key) { console.error('PH chantier read:', e); } }
+  catch (e) { if (e.not_ready_key) { throw e; } console.error('PH chantier read:', e); }
 
   var personnelById = {};
   var vehiculeById = {};
@@ -104,13 +153,13 @@ function(instance, properties, context) {
   }
 
   try { buildMap(dataPersonnel, namePersonnel, personnelById); }
-  catch (e) { if (!e.not_ready_key) { console.error('PH personnel read:', e); } }
+  catch (e) { if (e.not_ready_key) { throw e; } console.error('PH personnel read:', e); }
 
   try { buildMap(dataVehicule, nameVehicule, vehiculeById); }
-  catch (e) { if (!e.not_ready_key) { console.error('PH vehicule read:', e); } }
+  catch (e) { if (e.not_ready_key) { throw e; } console.error('PH vehicule read:', e); }
 
   try { buildMap(dataSoustraitant, nameSoustraitant, soustraitantById); }
-  catch (e) { if (!e.not_ready_key) { console.error('PH soustraitant read:', e); } }
+  catch (e) { if (e.not_ready_key) { throw e; } console.error('PH soustraitant read:', e); }
 
   var conducteurToVehiculeIds = {};
   try {
@@ -130,7 +179,7 @@ function(instance, properties, context) {
         conducteurToVehiculeIds[conducteurIds[ci]].push(vid);
       }
     }
-  } catch (e) { if (!e.not_ready_key) { console.error('PH conducteur map:', e); } }
+  } catch (e) { if (e.not_ready_key) { throw e; } console.error('PH conducteur map:', e); }
   instance.data.conducteurToVehiculeIds = conducteurToVehiculeIds;
 
   var vehiculeIndisponibleSet = {};
@@ -145,7 +194,7 @@ function(instance, properties, context) {
         }
       }
     }
-  } catch (e) { if (!e.not_ready_key) { console.error('PH vehicule indispo read:', e); } }
+  } catch (e) { if (e.not_ready_key) { throw e; } console.error('PH vehicule indispo read:', e); }
 
   // ===========================================
   // STEP 2: READ PLANNING DATA
@@ -226,20 +275,33 @@ function(instance, properties, context) {
         for (var j = 0; j < entry.atelier.length; j++) { assignedPersonnel[entry.atelier[j]] = true; }
       }
     }
-  } catch (e) { if (!e.not_ready_key) { console.error('PH planning read:', e); } }
+  } catch (e) { if (e.not_ready_key) { throw e; } console.error('PH planning read:', e); }
 
   // ===========================================
   // STEP 2b: READ ABSENCE DATA
   // ===========================================
   var absenceMap = {};
   var absenceTypeItems = null;
-  try { absenceTypeItems = readList(dataAbsenceTypes); }
-  catch (e) { if (!e.not_ready_key) { console.error('PH absence types read:', e); } }
+  try { absenceTypeItems = readList(dataAbsenceMotifs); }
+  catch (e) { if (e.not_ready_key) { throw e; } console.error('PH absence types read:', e); }
 
+  var absenceTypeNames = {}; // typeId → displayName
   if (absenceTypeItems) {
     for (var i = 0; i < absenceTypeItems.length; i++) {
-      var typeName = absenceTypeItems[i];
-      if (typeName && typeof typeName === 'string') { absenceMap[typeName] = []; }
+      var typeObj = absenceTypeItems[i];
+      if (!typeObj) { continue; }
+      var typeId, typeName;
+      if (typeof typeObj.get === 'function') {
+        // Option sets Bubble : pas de _id, uniquement 'display'
+        typeName = typeObj.get('display');
+        typeId = typeName;
+      } else if (typeof typeObj === 'string') {
+        typeId = typeObj;
+        typeName = typeObj;
+      } else { continue; }
+      if (!typeId) { continue; }
+      absenceTypeNames[typeId] = typeName;
+      absenceMap[typeId] = [];
     }
   }
 
@@ -249,17 +311,22 @@ function(instance, properties, context) {
       for (var i = 0; i < absItems.length; i++) {
         var absItem = absItems[i];
         if (!absItem || typeof absItem.get !== 'function') { continue; }
-        var typeName = fieldAbsenceType ? absItem.get(fieldAbsenceType) : null;
-        if (!typeName || typeof typeName !== 'string') { continue; }
+        var typeRef = fieldAbsenceMotif ? absItem.get(fieldAbsenceMotif) : null;
+        var typeId = null;
+        if (typeRef && typeof typeRef.get === 'function') {
+          // Option set : clé = display
+          typeId = typeRef.get('display') || typeRef.get('_id');
+        } else if (typeof typeRef === 'string') { typeId = typeRef; }
+        if (!typeId) { continue; }
         var absPersonnelIds = extractIds(absItem, fieldAbsencePersonnel);
-        if (!absenceMap[typeName]) { absenceMap[typeName] = []; }
+        if (!absenceMap[typeId]) { absenceMap[typeId] = []; }
         for (var j = 0; j < absPersonnelIds.length; j++) {
-          absenceMap[typeName].push(absPersonnelIds[j]);
+          absenceMap[typeId].push(absPersonnelIds[j]);
           assignedPersonnel[absPersonnelIds[j]] = true;
         }
       }
     }
-  } catch (e) { if (!e.not_ready_key) { console.error('PH absence planning read:', e); } }
+  } catch (e) { if (e.not_ready_key) { throw e; } console.error('PH absence planning read:', e); }
 
   // ===========================================
   // STEP 2c: READ BUREAU DATA
@@ -278,7 +345,25 @@ function(instance, properties, context) {
         }
       }
     }
-  } catch (e) { if (!e.not_ready_key) { console.error('PH bureau planning read:', e); } }
+  } catch (e) { if (e.not_ready_key) { throw e; } console.error('PH bureau planning read:', e); }
+
+  // ===========================================
+  // STEP 2c2: READ ATELIER GÉNÉRAL DATA
+  // ===========================================
+  try {
+    var atelierItems = readList(dataAtelierPlanning);
+    if (atelierItems) {
+      for (var i = 0; i < atelierItems.length; i++) {
+        var atItem = atelierItems[i];
+        if (!atItem || typeof atItem.get !== 'function') { continue; }
+        var atPersonnelIds = extractIds(atItem, fieldAtelierGeneralPersonnel);
+        for (var j = 0; j < atPersonnelIds.length; j++) {
+          atelierGeneralPersonnelIds.push(atPersonnelIds[j]);
+          assignedPersonnel[atPersonnelIds[j]] = true;
+        }
+      }
+    }
+  } catch (e) { if (e.not_ready_key) { throw e; } console.error('PH atelier planning read:', e); }
 
   // ===========================================
   // STEP 2d: READ LIVRAISONS DU JOUR
@@ -297,7 +382,7 @@ function(instance, properties, context) {
         if (livChantierId) { livraisonChantierIds[livChantierId] = true; }
       }
     }
-  } catch (e) { if (!e.not_ready_key) { console.error('PH livraisons read:', e); } }
+  } catch (e) { if (e.not_ready_key) { throw e; } console.error('PH livraisons read:', e); }
 
   // ===========================================
   // STEP 3: HASH & CHANGE DETECTION — OPTIMISTIC UI
@@ -327,6 +412,8 @@ function(instance, properties, context) {
   var absKeys = Object.keys(absenceMap).sort();
   structuralHash += '|abst:' + absKeys.join(',');
   structuralHash += '|liv:' + Object.keys(livraisonChantierIds).sort().join(',');
+  structuralHash += '|bur:' + bureauPersonnelIds.slice().sort().join(',');
+  structuralHash += '|ag:' + atelierGeneralPersonnelIds.slice().sort().join(',');
 
   var assignmentHash = 'pl:' + Object.keys(planningMap).sort().length;
   var planKeys = Object.keys(planningMap).sort();
@@ -337,8 +424,6 @@ function(instance, properties, context) {
   for (var i = 0; i < absKeys.length; i++) {
     assignmentHash += '|' + absKeys[i] + '=' + absenceMap[absKeys[i]].join(',');
   }
-  assignmentHash += '|bur:' + bureauPersonnelIds.sort().join(',');
-  assignmentHash += '|ag:' + atelierGeneralPersonnelIds.slice().sort().join(',');
 
   var fullHash = structuralHash + '||' + assignmentHash;
 
@@ -408,11 +493,12 @@ function(instance, properties, context) {
 
   var absConflictKeys = Object.keys(absenceMap);
   for (var abi = 0; abi < absConflictKeys.length; abi++) {
-    var absTypeName = absConflictKeys[abi];
-    var abIds = absenceMap[absTypeName];
+    var absTypeId = absConflictKeys[abi];
+    var absLabel = absenceTypeNames[absTypeId] || absTypeId;
+    var abIds = absenceMap[absTypeId];
     for (var abii = 0; abii < abIds.length; abii++) {
       if (!personnelLocations[abIds[abii]]) { personnelLocations[abIds[abii]] = []; }
-      personnelLocations[abIds[abii]].push(absTypeName);
+      personnelLocations[abIds[abii]].push(absLabel);
     }
   }
 
@@ -493,6 +579,13 @@ function(instance, properties, context) {
     }
   }
 
+  // Mise à jour du compteur chantier dans l'en-tête
+  if (instance.data.chantierCountBadge) {
+    var count = chantierItems ? chantierItems.length : 0;
+    instance.data.chantierCountBadge.textContent = count > 0 ? count : '';
+    instance.data.chantierCountBadge.style.display = count > 0 ? 'inline-block' : 'none';
+  }
+
   // ===========================================
   // STEP 4b: BUILD ABSENCE ROWS
   // ===========================================
@@ -500,11 +593,15 @@ function(instance, properties, context) {
 
   if (absenceTypeItems && absenceTypeItems.length > 0) {
     for (var i = 0; i < absenceTypeItems.length; i++) {
-      var atName = absenceTypeItems[i];
-      if (!atName || typeof atName !== 'string') { continue; }
+      var atObj = absenceTypeItems[i];
+      if (!atObj || typeof atObj.get !== 'function') { continue; }
+      var atName = atObj.get('display');
+      if (!atName && typeof atObj === 'string') { atName = atObj; }
+      var atId = atName;
+      if (!atId) { continue; }
       var absRow = instance.data.createAbsenceRow(atName);
       absRow._motifName = atName;
-      var absPersonnelIds = absenceMap[atName] || [];
+      var absPersonnelIds = absenceMap[atId] || [];
       if (absPersonnelIds.length > 0) {
         var zone = absRow.querySelector('.ph-drop-zone');
         var label = zone.querySelector('.ph-empty-label');
@@ -589,6 +686,7 @@ function(instance, properties, context) {
     }
   }
 
+  if (instance.data.searchPersonnel) { instance.data.searchPersonnel.value = ''; }
   populatePool(instance.data.poolPersonnel, personnelById, assignedPersonnel, 'personnel');
   if (instance.data.countPersonnel) { instance.data.countPersonnel.textContent = instance.data.poolPersonnel.querySelectorAll('.ph-res-tag').length || ''; }
 
@@ -614,15 +712,248 @@ function(instance, properties, context) {
         var cId = conflictIds[cIdx];
         var pRes = personnelById[cId];
         if (!pRes) { continue; }
-        var locations = personnelLocations[cId] || [];
-        var desc = locations.join(' \u00b7 ');
         var cItem = document.createElement('div');
         cItem.className = 'ph-conflict-item';
-        cItem.textContent = pRes.name + ' \u2014 ' + desc;
+        var nameEl = document.createElement('div');
+        nameEl.className = 'ph-conflict-person';
+        nameEl.textContent = pRes.name;
+        cItem.appendChild(nameEl);
+        var tagsEl = document.createElement('div');
+        tagsEl.className = 'ph-conflict-tags';
+        var locs = personnelLocations[cId] || [];
+        for (var li = 0; li < locs.length; li++) {
+          var locTag = document.createElement('span');
+          locTag.className = 'ph-conflict-loc-tag';
+          locTag.textContent = locs[li];
+          tagsEl.appendChild(locTag);
+        }
+        cItem.appendChild(tagsEl);
         conflictZoneEl.appendChild(cItem);
       }
       conflictZoneEl.style.display = 'block';
     }
+  }
+
+  // === RETRY UNIQUE : rattrape le lazy-loading Bubble au premier chargement ===
+  // Au 1er render, certains sous-champs relationnels (field_personnel) sont null car
+  // Bubble n'a pas encore chargé ces données en cache client. On stocke la ref
+  // live de properties et on re-lit le planning 1.5s plus tard depuis la même ref.
+  // Si les données ont changé, on met à jour les cellules et la zone conflits directement.
+  instance.data.liveProps = properties;
+  instance.data.personnelById = personnelById;
+  instance.data.retryFields = { fieldChantier: fieldChantier, fieldPersonnel: fieldPersonnel };
+  instance.data.retryAbsenceState = {
+    absenceMap: absenceMap,
+    absenceTypeNames: absenceTypeNames,
+    bureauPersonnelIds: bureauPersonnelIds,
+    atelierGeneralPersonnelIds: atelierGeneralPersonnelIds,
+    chantierNameMap: chantierNameMap
+  };
+
+  if (!instance.data.hasRetried) {
+    instance.data.hasRetried = true;
+    setTimeout(function() {
+      var props = instance.data.liveProps;
+      var rf = instance.data.retryFields;
+      var persById = instance.data.personnelById;
+      if (!props || !rf || !persById) { return; }
+
+      var dp = props.data_type_planning;
+      if (!dp || typeof dp.length !== 'function') { return; }
+      var dLen = dp.length();
+      if (dLen === 0) { return; }
+      var dItems = dp.get(0, dLen);
+
+      // Re-lire les IDs de personnel par chantier
+      var freshMap = {};
+      for (var ii = 0; ii < dItems.length; ii++) {
+        var pi = dItems[ii];
+        if (!pi || typeof pi.get !== 'function') { continue; }
+        var chRef = rf.fieldChantier ? pi.get(rf.fieldChantier) : null;
+        var chId = null;
+        if (chRef && typeof chRef.get === 'function') { chId = chRef.get('_id'); }
+        else if (typeof chRef === 'string') { chId = chRef; }
+        if (!chId) { continue; }
+        var persIds = [];
+        var ref = rf.fieldPersonnel ? pi.get(rf.fieldPersonnel) : null;
+        if (ref && typeof ref.length === 'function') {
+          var rLen = ref.length();
+          if (rLen > 0) {
+            var rItems = ref.get(0, rLen);
+            for (var jj = 0; jj < rItems.length; jj++) {
+              if (rItems[jj] && typeof rItems[jj].get === 'function') {
+                var pid = rItems[jj].get('_id');
+                if (pid) { persIds.push(pid); }
+              }
+            }
+          }
+        }
+        freshMap[chId] = persIds;
+      }
+
+      // Vérifier si des données ont changé vs le premier render
+      var oldPm = instance.data.planningMap || {};
+      var changed = false;
+      for (var chId in freshMap) {
+        var oldE = oldPm[chId];
+        if (!oldE || oldE.personnel.length !== freshMap[chId].length) { changed = true; break; }
+      }
+      if (!changed) { return; }
+
+      // Recalculer les locations personnel + conflits
+      var rs = instance.data.retryAbsenceState || {};
+      var absMap = rs.absenceMap || {};
+      var absTypeNames = rs.absenceTypeNames || {};
+      var burIds = rs.bureauPersonnelIds || [];
+      var agIds = rs.atelierGeneralPersonnelIds || [];
+      var chNameMap = rs.chantierNameMap || {};
+      var persLocs = {};
+      var assignedP = {};
+
+      for (var chId in freshMap) {
+        var pIds = freshMap[chId];
+        var lbl = chNameMap[chId] || '\u2014';
+        for (var k = 0; k < pIds.length; k++) {
+          assignedP[pIds[k]] = true;
+          if (!persLocs[pIds[k]]) { persLocs[pIds[k]] = []; }
+          persLocs[pIds[k]].push(lbl);
+        }
+      }
+      var absK = Object.keys(absMap);
+      for (var ai = 0; ai < absK.length; ai++) {
+        var abIds = absMap[absK[ai]];
+        var abLabel = absTypeNames[absK[ai]] || absK[ai];
+        for (var k = 0; k < abIds.length; k++) {
+          assignedP[abIds[k]] = true;
+          if (!persLocs[abIds[k]]) { persLocs[abIds[k]] = []; }
+          persLocs[abIds[k]].push(abLabel);
+        }
+      }
+      for (var k = 0; k < burIds.length; k++) {
+        assignedP[burIds[k]] = true;
+        if (!persLocs[burIds[k]]) { persLocs[burIds[k]] = []; }
+        persLocs[burIds[k]].push('Bureau');
+      }
+      for (var k = 0; k < agIds.length; k++) {
+        assignedP[agIds[k]] = true;
+        if (!persLocs[agIds[k]]) { persLocs[agIds[k]] = []; }
+        persLocs[agIds[k]].push('Atelier g\u00e9n.');
+      }
+      var conflictPIds = {};
+      for (var cpid in persLocs) {
+        if (persLocs[cpid].length >= 2) { conflictPIds[cpid] = true; }
+      }
+
+      // Mettre à jour les cellules personnel des lignes chantier
+      var rows = instance.data.rowsContainer ? instance.data.rowsContainer.children : [];
+      for (var ri = 0; ri < rows.length; ri++) {
+        var row = rows[ri];
+        var rChId = row._bubbleObject && typeof row._bubbleObject.get === 'function' ? row._bubbleObject.get('_id') : null;
+        if (!rChId || freshMap[rChId] === undefined) { continue; }
+        var freshIds = freshMap[rChId];
+        var oldEntry = oldPm[rChId];
+        var zones = row.querySelectorAll('.ph-drop-zone');
+        if (!zones[0]) { continue; }
+        // Mise à jour uniquement si le nombre a changé
+        if (oldEntry && oldEntry.personnel.length === freshIds.length) {
+          // Juste mettre à jour les classes conflit sur les tags existants
+          var eTags = zones[0].querySelectorAll('.ph-res-tag');
+          for (var t = 0; t < eTags.length; t++) {
+            var tId = eTags[t]._resourceId;
+            if (tId) {
+              if (conflictPIds[tId]) { eTags[t].classList.add('ph-tag-conflict'); }
+              else { eTags[t].classList.remove('ph-tag-conflict'); }
+            }
+          }
+          continue;
+        }
+        // Re-remplir la zone personnel
+        var oldTagsArr = zones[0].querySelectorAll('.ph-res-tag');
+        for (var t = 0; t < oldTagsArr.length; t++) { oldTagsArr[t].remove(); }
+        var emLbl = zones[0].querySelector('.ph-empty-label');
+        if (freshIds.length === 0) {
+          if (!emLbl) {
+            var lbl2 = document.createElement('span');
+            lbl2.className = 'ph-empty-label';
+            zones[0].appendChild(lbl2);
+          }
+        } else {
+          if (emLbl) { emLbl.remove(); }
+          for (var j = 0; j < freshIds.length; j++) {
+            var res2 = persById[freshIds[j]];
+            if (res2) {
+              var tag2 = instance.data.createTag(res2.name, 'personnel', true, false);
+              tag2._bubbleObject = res2.object;
+              tag2._resourceId = freshIds[j];
+              if (conflictPIds[freshIds[j]]) { tag2.classList.add('ph-tag-conflict'); }
+              zones[0].appendChild(tag2);
+            }
+          }
+        }
+      }
+
+      // Mettre à jour le pool personnel
+      if (instance.data.poolPersonnel) {
+        instance.data.poolPersonnel.innerHTML = '';
+        for (var pKey in persById) {
+          if (assignedP[pKey]) { continue; }
+          var res3 = persById[pKey];
+          var tag3 = instance.data.createTag(res3.name, 'personnel', false, false);
+          tag3._bubbleObject = res3.object;
+          tag3._resourceId = pKey;
+          instance.data.poolPersonnel.appendChild(tag3);
+        }
+        if (instance.data.countPersonnel) {
+          instance.data.countPersonnel.textContent = instance.data.poolPersonnel.querySelectorAll('.ph-res-tag').length || '';
+        }
+      }
+
+      // Mettre à jour la zone conflits
+      var conflictZoneEl = instance.data.conflictZone;
+      if (conflictZoneEl) {
+        var cIds = Object.keys(conflictPIds);
+        if (cIds.length === 0) {
+          conflictZoneEl.style.display = 'none';
+        } else {
+          conflictZoneEl.innerHTML = '';
+          var hdr2 = document.createElement('div');
+          hdr2.className = 'ph-conflict-header';
+          hdr2.textContent = '\u26a0\ufe0f ' + cIds.length + ' conflit' + (cIds.length > 1 ? 's' : '');
+          conflictZoneEl.appendChild(hdr2);
+          for (var ci = 0; ci < cIds.length; ci++) {
+            var cId2 = cIds[ci];
+            var pRes2 = persById[cId2];
+            if (!pRes2) { continue; }
+            var cItem2 = document.createElement('div');
+            cItem2.className = 'ph-conflict-item';
+            var nameEl2 = document.createElement('div');
+            nameEl2.className = 'ph-conflict-person';
+            nameEl2.textContent = pRes2.name;
+            cItem2.appendChild(nameEl2);
+            var tagsEl2 = document.createElement('div');
+            tagsEl2.className = 'ph-conflict-tags';
+            var locs2 = persLocs[cId2] || [];
+            for (var li2 = 0; li2 < locs2.length; li2++) {
+              var locTag2 = document.createElement('span');
+              locTag2.className = 'ph-conflict-loc-tag';
+              locTag2.textContent = locs2[li2];
+              tagsEl2.appendChild(locTag2);
+            }
+            cItem2.appendChild(tagsEl2);
+            conflictZoneEl.appendChild(cItem2);
+          }
+          conflictZoneEl.style.display = 'block';
+        }
+      }
+
+      // Mettre à jour planningMap pour cohérence drag-drop
+      for (var chId in freshMap) {
+        if (oldPm[chId]) { oldPm[chId].personnel = freshMap[chId]; }
+        else { oldPm[chId] = { personnel: freshMap[chId], vehicule: [], soustraitant: [], atelier: [], commentaire: '' }; }
+      }
+      instance.data.planningMap = oldPm;
+
+    }, 1500);
   }
 
   // --- Hide skeleton : stabilité données sur 2 updates consécutifs + délai minimum 600ms ---
@@ -638,9 +969,10 @@ function(instance, properties, context) {
       // Même hash 2 updates de suite + délai minimum écoulé → cacher
       instance.data.skeletonHidden = true;
       clearTimeout(instance.data.skeletonFallbackTimer);
+      clearTimeout(instance.data.absoluteSkeletonTimer);
       var _skel = instance.data.skeleton;
       _skel.style.opacity = '0';
-      setTimeout(function() { if (_skel) { _skel.style.display = 'none'; } }, 380);
+      setTimeout(function() { if (_skel) { _skel.style.display = 'none'; } if (instance.data.rebuildConflictZone) { instance.data.rebuildConflictZone(); } }, 380);
     } else if (instance.data.lastSkeletonStableHash === fullHash && !minDelayOk) {
       // Même hash mais trop tôt → attendre que le délai soit écoulé
       clearTimeout(instance.data.skeletonFallbackTimer);
@@ -648,8 +980,9 @@ function(instance, properties, context) {
       instance.data.skeletonFallbackTimer = setTimeout(function() {
         if (!instance.data.skeleton || instance.data.skeletonHidden) return;
         instance.data.skeletonHidden = true;
+        clearTimeout(instance.data.absoluteSkeletonTimer);
         instance.data.skeleton.style.opacity = '0';
-        setTimeout(function() { if (instance.data.skeleton) { instance.data.skeleton.style.display = 'none'; } }, 380);
+        setTimeout(function() { if (instance.data.skeleton) { instance.data.skeleton.style.display = 'none'; } if (instance.data.rebuildConflictZone) { instance.data.rebuildConflictZone(); } }, 380);
       }, _remainingDelay);
     } else {
       // Nouveau hash → noter le hash, attendre le suivant (fallback 700ms)
@@ -658,8 +991,9 @@ function(instance, properties, context) {
       instance.data.skeletonFallbackTimer = setTimeout(function() {
         if (!instance.data.skeleton || instance.data.skeletonHidden) return;
         instance.data.skeletonHidden = true;
+        clearTimeout(instance.data.absoluteSkeletonTimer);
         instance.data.skeleton.style.opacity = '0';
-        setTimeout(function() { if (instance.data.skeleton) { instance.data.skeleton.style.display = 'none'; } }, 380);
+        setTimeout(function() { if (instance.data.skeleton) { instance.data.skeleton.style.display = 'none'; } if (instance.data.rebuildConflictZone) { instance.data.rebuildConflictZone(); } }, 380);
       }, 700);
     }
   }

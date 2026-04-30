@@ -256,6 +256,7 @@ function(instance, properties) {
     <div style="
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
+      min-height: 500px;
       display: flex;
       gap: 12px;
       padding: 12px;
@@ -486,5 +487,5 @@ function(instance, properties) {
     </div>
   `;
 
-  $(instance.canvas).empty().append(html);
+  $(instance.canvas).css('min-height', '500px').empty().append(html);
 }

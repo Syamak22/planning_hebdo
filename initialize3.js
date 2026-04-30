@@ -10,7 +10,7 @@ function(instance, context) {
     vehicule:      { main: '#10B981', bg: '#ECFDF5' },
     soustraitant:  { main: '#F59E0B', bg: '#FFFBEB' },
     atelier:       { main: '#8B5CF6', bg: '#F5F3FF' },
-    bureau:        { main: '#0EA5E9', bg: '#F0F9FF' },
+    general:        { main: '#0EA5E9', bg: '#F0F9FF' },
     absence:       { main: '#EF4444', bg: '#FEF2F2' }
   };
 
@@ -26,7 +26,8 @@ function(instance, context) {
       height: 100%;
       padding: 0;
       margin: 0;
-      background-color: transparent;
+      background: #F1F5F9;
+      border-radius: inherit;
       border: 0;
       display: flex;
       gap: 12px;
@@ -52,7 +53,7 @@ function(instance, context) {
       min-width: 0;
       min-height: 0;
       border: 1px solid #E2E8F0;
-      border-radius: 8px;
+      border-radius: 5px;
       overflow: hidden;
     }
 
@@ -73,10 +74,11 @@ function(instance, context) {
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 6px;
+      border-radius: 5px;
       cursor: pointer;
-      color: #64748B;
-      background: #E2E8F0;
+      color: #e31e24;
+      background: none;
+      border: 1px solid #e2e8f0;
       font-size: 14px;
       font-weight: 600;
       user-select: none;
@@ -84,7 +86,8 @@ function(instance, context) {
     }
 
     .planningHebdo-${instanceId} .ph-date-nav:hover {
-      background: #CBD5E1;
+      background: #fef2f2;
+      border-color: #e31e24;
     }
 
     .planningHebdo-${instanceId} .ph-date-center {
@@ -123,9 +126,9 @@ function(instance, context) {
     .planningHebdo-${instanceId} .ph-col-header {
       padding: 6px 8px;
       font-size: 10px;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.08em;
       text-align: center;
       flex: 1;
       border-right: 1px solid #F1F5F9;
@@ -143,6 +146,18 @@ function(instance, context) {
       padding: 6px 12px;
       color: #64748B;
       border-right: 1px solid #E2E8F0;
+    }
+
+    .planningHebdo-${instanceId} .ph-chantier-count-badge {
+      background: #E2E8F0;
+      color: #475569;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 1px 6px;
+      min-width: 18px;
+      text-align: center;
+      display: inline-block;
     }
 
     .planningHebdo-${instanceId} .ph-rows {
@@ -246,7 +261,7 @@ function(instance, context) {
       align-items: center;
       gap: 2px;
       padding: 1px 5px;
-      border-radius: 4px;
+      border-radius: 5px;
       font-size: 9px;
       font-weight: 700;
       white-space: nowrap;
@@ -312,15 +327,17 @@ function(instance, context) {
       flex-wrap: wrap;
       align-items: center;
       gap: 2px;
-      border-radius: 4px;
+      border-radius: 5px;
       margin: 2px;
     }
 
     .planningHebdo-${instanceId} .ph-drop-zone.zone-personnel {
+      flex: 2;
       background: #EFF6FF66;
     }
 
     .planningHebdo-${instanceId} .ph-drop-zone.zone-vehicule {
+      flex: 2;
       background: #ECFDF566;
     }
 
@@ -379,7 +396,7 @@ function(instance, context) {
       display: flex;
       flex-direction: column;
       border: 1px solid #E2E8F0;
-      border-radius: 8px;
+      border-radius: 5px;
       overflow: hidden;
     }
 
@@ -451,7 +468,7 @@ function(instance, context) {
       display: flex;
       flex-direction: column;
       border: 1px solid #E2E8F0;
-      border-radius: 8px;
+      border-radius: 5px;
       overflow: hidden;
     }
 
@@ -476,9 +493,9 @@ function(instance, context) {
 
     .planningHebdo-${instanceId} .ph-res-section-label {
       font-size: 10px;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.08em;
       margin-bottom: 6px;
       display: flex;
       align-items: center;
@@ -502,12 +519,61 @@ function(instance, context) {
     .planningHebdo-${instanceId} .ph-pool-count.count-vehicule   { background: #10B981; }
     .planningHebdo-${instanceId} .ph-pool-count.count-soustraitant { background: #F59E0B; }
 
+    .planningHebdo-${instanceId} .ph-search-wrap {
+      position: relative;
+      margin-bottom: 6px;
+    }
+
+    .planningHebdo-${instanceId} .ph-search-personnel {
+      width: 100%;
+      padding: 4px 22px 4px 26px;
+      border: 1px solid #E2E8F0;
+      border-radius: 5px;
+      font-size: 11px;
+      color: #1E293B;
+      background: #F8FAFC url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 8px center;
+      outline: none;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+
+    .planningHebdo-${instanceId} .ph-search-personnel:focus {
+      border-color: #3B82F6;
+      background-color: #fff;
+    }
+
+    .planningHebdo-${instanceId} .ph-search-clear {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #94A3B8;
+      font-size: 12px;
+      line-height: 1;
+      border-radius: 50%;
+    }
+
+    .planningHebdo-${instanceId} .ph-search-clear:hover {
+      color: #475569;
+      background: #E2E8F0;
+    }
+
+    .planningHebdo-${instanceId} .ph-search-clear.visible {
+      display: flex;
+    }
+
     .planningHebdo-${instanceId} .ph-res-pool {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
       padding: 6px;
-      border-radius: 6px;
+      border-radius: 5px;
       min-height: 30px;
       border: 1px dashed;
     }
@@ -531,7 +597,7 @@ function(instance, context) {
       display: inline-flex;
       align-items: center;
       padding: 2px 8px;
-      border-radius: 4px;
+      border-radius: 5px;
       font-size: 11px;
       font-weight: 500;
       white-space: normal;
@@ -674,18 +740,19 @@ function(instance, context) {
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 6px;
+      border-radius: 5px;
       cursor: pointer;
-      color: #64748B;
-      background: #E2E8F0;
+      color: #e31e24;
+      background: none;
+      border: 1px solid #e2e8f0;
       transition: background 0.15s;
       position: absolute;
       right: 48px;
     }
 
     .planningHebdo-${instanceId} .ph-duplicate-btn:hover {
-      background: #CBD5E1;
-      color: #334155;
+      background: #fef2f2;
+      border-color: #e31e24;
     }
 
     /* --- Print button --- */
@@ -695,18 +762,66 @@ function(instance, context) {
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 6px;
+      border-radius: 5px;
       cursor: pointer;
-      color: #64748B;
-      background: #E2E8F0;
+      color: #e31e24;
+      background: none;
+      border: 1px solid #e2e8f0;
       transition: background 0.15s;
       position: absolute;
       right: 12px;
     }
 
     .planningHebdo-${instanceId} .ph-print-btn:hover {
-      background: #CBD5E1;
-      color: #334155;
+      background: #fef2f2;
+      border-color: #e31e24;
+    }
+
+    /* --- Compact button --- */
+    .planningHebdo-${instanceId} .ph-compact-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #64748B;
+      background: none;
+      border: 1px solid #e2e8f0;
+      transition: background 0.15s, color 0.15s;
+      position: absolute;
+      right: 84px;
+    }
+
+    .planningHebdo-${instanceId} .ph-compact-btn:hover {
+      background: #F1F5F9;
+      border-color: #94A3B8;
+    }
+
+    .planningHebdo-${instanceId} .ph-compact-btn.active {
+      background: #EFF6FF;
+      border-color: #3B82F6;
+      color: #3B82F6;
+    }
+
+    /* --- Compact mode --- */
+    .planningHebdo-${instanceId}.ph-compact .ph-row {
+      min-height: 28px;
+    }
+
+    .planningHebdo-${instanceId}.ph-compact .ph-cell-chantier,
+    .planningHebdo-${instanceId}.ph-compact .ph-cell-resources {
+      padding: 2px 6px;
+    }
+
+    .planningHebdo-${instanceId}.ph-compact .ph-res-tag {
+      font-size: 10px;
+      padding: 1px 5px;
+    }
+
+    .planningHebdo-${instanceId}.ph-compact .ph-chantier-name {
+      font-size: 11px;
     }
 
     /* (print handled via popup window) */
@@ -735,7 +850,7 @@ function(instance, context) {
       background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
       background-size: 1200px 100%;
       animation: ph-shimmer-${instanceId} 1.6s ease-in-out infinite;
-      border-radius: 4px;
+      border-radius: 5px;
     }
 
     .planningHebdo-${instanceId} .ph-skel-main {
@@ -751,7 +866,7 @@ function(instance, context) {
       display: flex;
       flex-direction: column;
       border: 1px solid #E2E8F0;
-      border-radius: 8px;
+      border-radius: 5px;
       overflow: hidden;
     }
 
@@ -796,7 +911,7 @@ function(instance, context) {
     .planningHebdo-${instanceId} .ph-skel-section {
       flex: none;
       border: 1px solid #E2E8F0;
-      border-radius: 8px;
+      border-radius: 5px;
       padding: 10px 12px;
       display: flex;
       align-items: center;
@@ -810,7 +925,7 @@ function(instance, context) {
       flex-direction: column;
       gap: 0;
       border: 1px solid #E2E8F0;
-      border-radius: 8px;
+      border-radius: 5px;
       padding: 10px;
       overflow: hidden;
     }
@@ -835,25 +950,146 @@ function(instance, context) {
     .planningHebdo-${instanceId} .ph-conflict-zone {
       background: #fff8e1;
       border: 1px solid #f59e0b;
-      border-radius: 6px;
+      border-radius: 5px;
       padding: 8px 10px;
       margin-bottom: 10px;
       font-size: 12px;
     }
     .planningHebdo-${instanceId} .ph-conflict-header {
-      font-weight: 600;
+      font-weight: 700;
       color: #92400e;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .planningHebdo-${instanceId} .ph-conflict-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 6px 0 3px;
+      border-top: 1px solid rgba(245,158,11,0.25);
+    }
+    .planningHebdo-${instanceId} .ph-conflict-person {
+      font-size: 12px;
+      font-weight: 700;
+      color: #92400e;
+    }
+    .planningHebdo-${instanceId} .ph-conflict-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+    }
+    .planningHebdo-${instanceId} .ph-conflict-loc-tag {
+      padding: 2px 7px;
+      background: rgba(254,243,199,0.8);
+      border: 1px solid #f59e0b;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 500;
       color: #78350f;
-      padding: 2px 0;
-      word-break: break-word;
+      white-space: nowrap;
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .planningHebdo-${instanceId} .ph-tag-conflict {
       background: #fef3c7 !important;
       border: 1.5px solid #f59e0b !important;
       color: #92400e !important;
+    }
+
+    /* === READ-ONLY MODE === */
+    .planningHebdo-${instanceId}.ph-readonly .ph-tag-remove { display: none !important; }
+    .planningHebdo-${instanceId}.ph-readonly .ph-duplicate-btn { display: none !important; }
+    .planningHebdo-${instanceId}.ph-readonly .ph-res-tag { cursor: default; }
+    .planningHebdo-${instanceId}.ph-readonly .ph-res-pool { cursor: default; border-style: solid; }
+    .planningHebdo-${instanceId}.ph-readonly .ph-drop-zone { cursor: default; }
+
+    /* === JOUR OFF === */
+    .planningHebdo-${instanceId} .ph-jour-off-badge {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      background: #FFF7ED;
+      color: #C2410C;
+      border: 1.5px solid #FB923C;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .planningHebdo-${instanceId} .ph-jour-off-badge.active {
+      display: inline-flex;
+    }
+
+    .planningHebdo-${instanceId}.ph-jour-off .ph-date-header {
+      background: #FFF7ED;
+      border-bottom-color: #FB923C44;
+    }
+
+    /* === PRÉ-REMPLIR BUTTON === */
+    .planningHebdo-${instanceId} .ph-preremplir-btn {
+      position: absolute;
+      left: 12px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #e31e24;
+      background: none;
+      border: 1px solid #e2e8f0;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .planningHebdo-${instanceId} .ph-preremplir-btn:hover {
+      background: #fef2f2;
+      border-color: #e31e24;
+    }
+
+    .planningHebdo-${instanceId} .ph-preremplir-spinner {
+      position: absolute;
+      left: 12px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      padding: 0 12px;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94A3B8;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+
+    .planningHebdo-${instanceId} .ph-preremplir-spinner.active {
+      display: flex;
+    }
+
+    .planningHebdo-${instanceId} .ph-preremplir-spinner-ring {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #e2e8f0;
+      border-top-color: #e31e24;
+      border-radius: 50%;
+      animation: ph-spin-${instanceId} 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes ph-spin-${instanceId} {
+      to { transform: rotate(360deg); }
     }
   `;
   document.head.appendChild(style);
@@ -939,6 +1175,18 @@ function(instance, context) {
     container.appendChild(skeleton);
     instance.data.skeleton = skeleton;
     instance.data.skeletonShownAt = Date.now();
+
+    // Fallback absolu : si planningDataReady reste false (Bubble ne renvoie pas d'update), cacher après 4s
+    instance.data.absoluteSkeletonTimer = setTimeout(function() {
+      if (!instance.data.skeleton || instance.data.skeletonHidden) { return; }
+      instance.data.skeletonHidden = true;
+      clearTimeout(instance.data.skeletonFallbackTimer);
+      instance.data.skeleton.style.opacity = '0';
+      setTimeout(function() {
+        if (instance.data.skeleton) { instance.data.skeleton.style.display = 'none'; }
+        if (instance.data.rebuildConflictZone) { instance.data.rebuildConflictZone(); }
+      }, 380);
+    }, 4000);
   })();
 
   // Skeleton : show (instant) — utilisable depuis les event handlers de navigation
@@ -986,7 +1234,13 @@ function(instance, context) {
   dateInput.type = 'date';
   dateInput.className = 'ph-date-input';
 
+  var jourOffBadge = document.createElement('span');
+  jourOffBadge.className = 'ph-jour-off-badge';
+  jourOffBadge.innerHTML = '🚫 Jour off';
+  instance.data.jourOffBadge = jourOffBadge;
+
   dateCenter.appendChild(dateLabel);
+  dateCenter.appendChild(jourOffBadge);
   dateCenter.appendChild(dateIcon);
   dateCenter.appendChild(dateInput);
 
@@ -1108,8 +1362,6 @@ function(instance, context) {
       '<thead><tr><th class="col-chantier">CHANTIER</th><th>\ud83d\udc64 PERSONNEL</th><th>\ud83d\ude9a V\u00c9HICULES</th><th>\ud83d\udce6 SOUS-TRAITANTS</th><th>\ud83d\udd27 ATELIER</th><th class="col-comment">\ud83d\udcdd COMMENTAIRE</th></tr></thead>' +
       '<tbody>' + chantierRowsHtml + '</tbody>' +
       '</table>' +
-      '<div class="section-title absence">\u26d4 Absences / Indisponibilit\u00e9s</div>' +
-      '<table><tbody>' + absenceRowsHtml + '</tbody></table>' +
       '<div class="bottom-sections">' +
         '<div class="bottom-section">' +
           '<div class="section-title bureau">\ud83c\udfe2 Bureau</div>' +
@@ -1120,12 +1372,17 @@ function(instance, context) {
           '<div class="bureau-content">' + (atelierGeneralTagsHtml || '<span style="color:#94a3b8;">Personnel \u00e0 l\u2019atelier</span>') + '</div>' +
         '</div>' +
       '</div>' +
+      '<div class="section-title absence">\u26d4 Absences / Indisponibilit\u00e9s</div>' +
+      '<table><tbody>' + absenceRowsHtml + '</tbody></table>' +
       '</body></html>';
 
     var printWindow = window.open('', '_blank');
     printWindow.document.write(html);
     printWindow.document.close();
-    printWindow.onload = function() { printWindow.print(); };
+    printWindow.onload = function() {
+      printWindow.print();
+      printWindow.close();
+    };
   });
 
   // Duplicate button + hidden date input
@@ -1154,11 +1411,56 @@ function(instance, context) {
     instance.triggerEvent('duplicate_requested');
   });
 
+  // Pré-remplir button (left side)
+  var btnPreRemplir = document.createElement('div');
+  btnPreRemplir.className = 'ph-preremplir-btn';
+  btnPreRemplir.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Pré-remplir';
+
+  var preRemplirSpinner = document.createElement('div');
+  preRemplirSpinner.className = 'ph-preremplir-spinner';
+  preRemplirSpinner.innerHTML = '<div class="ph-preremplir-spinner-ring"></div>En cours…';
+
+  instance.data.btnPreRemplir = btnPreRemplir;
+  instance.data.preRemplirSpinner = preRemplirSpinner;
+  instance.data.preRemplirLoading = false;
+
+  btnPreRemplir.addEventListener('click', function() {
+    if (instance.data.preRemplirLoading) { return; }
+    instance.data.preRemplirLoading = true;
+    btnPreRemplir.style.display = 'none';
+    preRemplirSpinner.classList.add('active');
+    instance.triggerEvent('initialisation_planning');
+    setTimeout(function() {
+      instance.data.preRemplirLoading = false;
+      preRemplirSpinner.classList.remove('active');
+      btnPreRemplir.style.display = '';
+    }, 3000);
+  });
+
+  var btnCompact = document.createElement('div');
+  btnCompact.className = 'ph-compact-btn';
+  btnCompact.title = 'Vue compacte';
+  btnCompact.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="3" y1="14" x2="21" y2="14"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+  instance.data.isCompact = false;
+  btnCompact.addEventListener('click', function() {
+    instance.data.isCompact = !instance.data.isCompact;
+    if (instance.data.isCompact) {
+      container.classList.add('ph-compact');
+      btnCompact.classList.add('active');
+    } else {
+      container.classList.remove('ph-compact');
+      btnCompact.classList.remove('active');
+    }
+  });
+
+  dateHeader.appendChild(btnPreRemplir);
+  dateHeader.appendChild(preRemplirSpinner);
   dateHeader.appendChild(btnPrev);
   dateHeader.appendChild(dateCenter);
   dateHeader.appendChild(btnNext);
   dateHeader.appendChild(btnDuplicate);
   dateHeader.appendChild(btnPrint);
+  dateHeader.appendChild(btnCompact);
 
   // Column headers (5 columns: chantier + personnel + vehicule + soustraitant + atelier)
   var colHeaders = document.createElement('div');
@@ -1166,7 +1468,16 @@ function(instance, context) {
 
   var colChantier = document.createElement('div');
   colChantier.className = 'ph-col-header ph-col-chantier';
-  colChantier.textContent = 'Chantier';
+  colChantier.style.display = 'flex';
+  colChantier.style.alignItems = 'center';
+  colChantier.style.gap = '6px';
+  var colChantierLabel = document.createElement('span');
+  colChantierLabel.textContent = 'Chantier';
+  var colChantierCount = document.createElement('span');
+  colChantierCount.className = 'ph-chantier-count-badge';
+  colChantier.appendChild(colChantierLabel);
+  colChantier.appendChild(colChantierCount);
+  instance.data.chantierCountBadge = colChantierCount;
 
   var colPersonnel = document.createElement('div');
   colPersonnel.className = 'ph-col-header';
@@ -1227,7 +1538,7 @@ function(instance, context) {
   bureauHeader.className = 'ph-section-header';
   bureauHeader.style.background = '#F0F9FF';
   bureauHeader.style.color = '#0EA5E9';
-  bureauHeader.innerHTML = '\u{1F4BC} Bureau';
+  bureauHeader.innerHTML = '\u{1F4BC} G\u00e9n\u00e9ral';
 
   var bureauZone = document.createElement('div');
   bureauZone.className = 'ph-bureau-zone ph-drop-zone zone-bureau';
@@ -1292,9 +1603,43 @@ function(instance, context) {
   countPersonnel.className = 'ph-pool-count count-personnel';
   labelPersonnel.appendChild(labelPersonnelText);
   labelPersonnel.appendChild(countPersonnel);
+  var searchWrap = document.createElement('div');
+  searchWrap.className = 'ph-search-wrap';
+
+  var searchPersonnel = document.createElement('input');
+  searchPersonnel.type = 'text';
+  searchPersonnel.className = 'ph-search-personnel';
+  searchPersonnel.placeholder = 'Rechercher…';
+
+  var searchClear = document.createElement('span');
+  searchClear.className = 'ph-search-clear';
+  searchClear.textContent = '\u00d7';
+
+  function applySearch() {
+    var q = searchPersonnel.value.trim().toLowerCase();
+    var tags = poolPersonnel.querySelectorAll('.ph-res-tag');
+    for (var i = 0; i < tags.length; i++) {
+      var name = (tags[i].firstChild && tags[i].firstChild.nodeType === 3) ? tags[i].firstChild.textContent.toLowerCase() : '';
+      tags[i].style.display = (!q || name.indexOf(q) !== -1) ? '' : 'none';
+    }
+    if (q) { searchClear.classList.add('visible'); } else { searchClear.classList.remove('visible'); }
+  }
+
+  searchPersonnel.addEventListener('input', applySearch);
+  searchClear.addEventListener('click', function() {
+    searchPersonnel.value = '';
+    applySearch();
+    searchPersonnel.focus();
+  });
+
+  searchWrap.appendChild(searchPersonnel);
+  searchWrap.appendChild(searchClear);
+  instance.data.searchPersonnel = searchPersonnel;
+
   var poolPersonnel = document.createElement('div');
   poolPersonnel.className = 'ph-res-pool pool-personnel';
   secPersonnel.appendChild(labelPersonnel);
+  secPersonnel.appendChild(searchWrap);
   secPersonnel.appendChild(poolPersonnel);
 
   // Véhicule section
@@ -1351,6 +1696,8 @@ function(instance, context) {
   instance.data.dateLabel = dateLabel;
   instance.data.dateInput = dateInput;
   instance.data.rowsContainer = rowsContainer;
+  instance.data.grid = grid;
+  instance.data.mainCol = mainCol;
   instance.data.poolPersonnel = poolPersonnel;
   instance.data.poolVehicule = poolVehicule;
   instance.data.poolSoustraitant = poolSoustraitant;
@@ -1605,7 +1952,8 @@ function(instance, context) {
     instance.publishState('target_chantier', null);
     instance.publishState('source_zone', null);
     instance.publishState('drop_zone', null);
-    instance.publishState('motif_absence', null);
+    instance.publishState('drop_motif_absence', null);
+    instance.publishState('source_motif_absence', null);
     instance.publishState('selected_chantier', null);
     instance.publishState('selected_date', null);
     instance.publishState('duplicate_target_date', null);
@@ -1623,6 +1971,7 @@ function(instance, context) {
   var dragData = null;
 
   container.addEventListener('dragstart', function(e) {
+    if (container.classList.contains('ph-readonly')) { e.preventDefault(); return; }
     var tag = e.target.closest('.ph-res-tag');
     if (!tag) return;
 
@@ -1731,7 +2080,8 @@ function(instance, context) {
       instance.publishState('source_chantier', sourceChantierObj);
       instance.publishState('source_zone', sourceZoneName);
       instance.publishState('drop_zone', 'pool');
-      instance.publishState('motif_absence', sourceMotif);
+      instance.publishState('drop_motif_absence', null);
+      instance.publishState('source_motif_absence', sourceMotif);
       instance.triggerEvent('assignment_removed');
       instance.data.hasLocalChanges = true;
       dragData = null;
@@ -1777,9 +2127,11 @@ function(instance, context) {
     instance.publishState('source_chantier', sourceChantierObj);
     instance.publishState('drop_zone', targetZoneName);
     instance.publishState('source_zone', sourceZoneName);
-    instance.publishState('motif_absence', targetMotif);
+    instance.publishState('drop_motif_absence', targetMotif);
+    instance.publishState('source_motif_absence', sourceMotif);
     instance.triggerEvent('assignment_changed');
     instance.data.hasLocalChanges = true;
+    if (instance.data.rebuildConflictZone) { instance.data.rebuildConflictZone(); }
     dragData = null;
   });
 
@@ -1835,7 +2187,8 @@ function(instance, context) {
     instance.publishState('source_chantier', chantierObj);
     instance.publishState('source_zone', zoneName);
     instance.publishState('drop_zone', 'pool');
-    instance.publishState('motif_absence', motif);
+    instance.publishState('drop_motif_absence', null);
+    instance.publishState('source_motif_absence', motif);
     instance.triggerEvent('assignment_removed');
     instance.data.hasLocalChanges = true;
   });
@@ -1945,7 +2298,20 @@ function(instance, context) {
         var cId = conflictIds[cIdx];
         var cItem = document.createElement('div');
         cItem.className = 'ph-conflict-item';
-        cItem.textContent = (names[cId] || cId) + ' \u2014 ' + locMap[cId].join(' \u00b7 ');
+        var nameEl = document.createElement('div');
+        nameEl.className = 'ph-conflict-person';
+        nameEl.textContent = names[cId] || cId;
+        cItem.appendChild(nameEl);
+        var tagsEl = document.createElement('div');
+        tagsEl.className = 'ph-conflict-tags';
+        var locs = locMap[cId] || [];
+        for (var li = 0; li < locs.length; li++) {
+          var locTag = document.createElement('span');
+          locTag.className = 'ph-conflict-loc-tag';
+          locTag.textContent = locs[li];
+          tagsEl.appendChild(locTag);
+        }
+        cItem.appendChild(tagsEl);
         cZone.appendChild(cItem);
       }
       cZone.style.display = 'block';
@@ -1965,6 +2331,18 @@ function(instance, context) {
 
   // Append to canvas
   instance.canvas.append(container);
+
+  // Hauteur dynamique : ajuster le canvas à la hauteur disponible
+  function setCanvasHeight() {
+    var rect = instance.canvas[0].getBoundingClientRect();
+    var h = Math.floor(window.innerHeight - rect.top - 16);
+    if (h > 100) {
+      instance.canvas[0].style.height = h + 'px';
+    }
+  }
+  instance.data.setCanvasHeight = setCanvasHeight;
+  setCanvasHeight();
+  window.addEventListener('resize', setCanvasHeight);
 
   instance.data.initialized = true;
 }
