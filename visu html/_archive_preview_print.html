@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Planning Hebdo — Preview</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F1F5F9; }
+    @media print {
+      body { background: #F1F5F9; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="no-print" style="padding:12px;background:#1E293B;color:white;display:flex;align-items:center;gap:12px;">
+  <span style="font-size:13px;">Planning Hebdo — Preview locale</span>
+  <button onclick="window.print()" style="padding:6px 14px;background:#3B82F6;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;">🖨 Imprimer</button>
+</div>
+
+<div id="root"></div>
+
+<script>
+(function() {
+  const C = {
+    personnel:    { main: '#3B82F6', bg: '#EFF6FF' },
+    vehicule:     { main: '#10B981', bg: '#ECFDF5' },
+    chantier:     { main: '#F59E0B', bg: '#FFFBEB' },
+    soustraitant: { main: '#F59E0B', bg: '#FFFBEB' },
+    transport:    { main: '#0EA5E9', bg: '#F0F9FF' },
+    k2:           { main: '#8B5CF6', bg: '#F5F3FF' },
+    finition:     { main: '#EC4899', bg: '#FDF2F8' },
+    atelier:      { main: '#64748B', bg: '#F8FAFC' },
+    bureau:       { main: '#0EA5E9', bg: '#F0F9FF' },
+    absence:      { main: '#EF4444', bg: '#FEF2F2' },
+  };
+
+  const chantierRows = [
+    { chantiers: ['Scp Le Sablier – Maison sablier en chêne'],           personnel: ['J. Dupont', 'M. Martin'], soustraitants: ['Terras Co'], vehicules: ['Camion 5T'],  commentaire: 'RDV 8h sur site' },
+    { chantiers: ['BB_SO.FO.VAR DRAGUIGNAN', 'GCPM PURIC – Pool house'], personnel: ['P. Durand', 'L. Garcia'], soustraitants: [],            vehicules: ['Camion 3T'],  commentaire: '' },
+    { chantiers: ['Sodobat – Groupe scolaire Fréjus'],                    personnel: [],                         soustraitants: ['Elec Pro'],   vehicules: ['Fourgon 2'], commentaire: 'Attente livraison' },
+    { chantiers: ['JDGA St TROPEZ – Réfection de couverture'],            personnel: ['A. Leroy'],               soustraitants: [],            vehicules: [],            commentaire: '' },
+    { chantiers: ['Palaia – Carport', 'Maison Bois Littoral – Chalet'],   personnel: ['S. Morel'],               soustraitants: [],            vehicules: ['Benne 5T'],  commentaire: '' },
+    { chantiers: [],                                                       personnel: [],                         soustraitants: [],            vehicules: [],            commentaire: '' },
+  ];
+
+  const transportLines = [
+    { chantiers: ['GCPM PURIC – Pool house Baron', 'Palaia – Carport'], personnel: 'N. Adeline', commentaire: '' },
+    { chantiers: ['Sodobat – Groupe scolaire Fréjus'],                  personnel: 'R. Petit',   commentaire: 'Retour 17h' },
+  ];
+  const k2Lines = [
+    { chantiers: ['BB_SO.FO.VAR DRAGUIGNAN'],    personnel: 'N. Adeline', commentaire: '' },
+    { chantiers: ['JDGA St TROPEZ – Réfection'], personnel: 'M. Martin',  commentaire: 'Matinée seulement' },
+  ];
+  const finitionK2Lines = [
+    { chantiers: ['Sodobat – Groupe scolaire Fréjus'], personnel: 'Stéphane D.', commentaire: 'Finition enduits' },
+    { chantiers: ['Maison Bois Littoral – Chalet'],    personnel: 'B. Noël',     commentaire: '' },
+  ];
+  const atelierLines = [
+    { chantiers: ['Maison Bois Littoral – Chalet'],      personnel: 'Stéphane D.',  commentaire: '' },
+    { chantiers: ['Scp Le Sablier – Maison Le sablier'], personnel: 'Chalidu Reva', commentaire: '' },
+    { chantiers: [],                                      personnel: 'Axel Caprioli',commentaire: '' },
+    { chantiers: ['BB_SO.FO.VAR DRAGUIGNAN'],            personnel: 'Elim Caprioli',commentaire: 'Après-midi' },
+  ];
+
+  const bureau = ['D. Laurent', 'V. Simon'];
+
+  const absenceTypes = [
+    { type: 'Congés',                personnel: ['K. Bensaid', 'T. Moreau'] },
+    { type: 'Formation',             personnel: ['H. Lemoine'] },
+    { type: 'Arrêt de travail',      personnel: ['C. Fabre'] },
+    { type: 'Absence non justifiée', personnel: [] },
+    { type: 'Visite médicale',       personnel: ['N. Roux'] },
+    { type: 'Autre',                 personnel: [] },
+  ];
+
+  const poolPersonnel    = ['A. Bernard', 'F. Blanc', 'C. Michel'];
+  const poolSoustraitant = ['Terras Co', 'Elec Pro', 'Plomb Express', 'Peinture+'];
+
+  const poolVehicules = [
+    'Camion 5T','Camion 3T','Fourgon 1','Fourgon 2','Benne 5T',
+    'Berlingo 1','Berlingo 2','Pickup 1','Pickup 2','Nacelle',
+    'Remorque 1','Remorque 2','Minibus','Grue mobile','Compresseur',
+  ];
+
+  const poolChantiersParZone = {
+    transport:  ['Scp Le Sablier', 'BB_SO.FO.VAR DRAGUIGNAN'],
+    k2:         ['Palaia – Carport', 'GCPM PURIC – Pool house'],
+    finitionK2: ['Maison Bois Littoral', 'Scp Le Sablier'],
+    atelier:    ['JDGA St TROPEZ', 'Vecchini Bois – test', 'BB_SO.FO.VAR'],
+  };
+
+  const POOL_W = '200px';
+
+  function tag(name, color, bg) {
+    return `<span style="display:inline-flex;align-items:center;padding:2px 7px;margin:2px;border-radius:4px;font-size:11px;font-weight:500;color:${color};background:${bg};border:1px solid ${color}22;white-space:normal;word-break:break-word;">${name}</span>`;
+  }
+
+  function dropZone(items, color, bg, placeholder, flex) {
+    const content = items.length
+      ? items.map(i => tag(i, color, bg)).join('')
+      : `<span style="font-size:10px;color:${color}55;font-style:italic;">${placeholder}</span>`;
+    return `<div style="flex:${flex||1};min-height:26px;padding:3px 4px;display:flex;flex-wrap:wrap;align-items:center;gap:2px;background:${bg}55;border-right:1px solid #F1F5F9;border-radius:4px;margin:2px;">${content}</div>`;
+  }
+
+  function commentZone(text) {
+    return `<div style="width:90px;min-width:90px;padding:4px 6px;display:flex;align-items:center;font-size:10px;color:#64748B;font-style:italic;border-left:1px solid #F1F5F9;">${text || '<span style="color:#CBD5E1;">—</span>'}</div>`;
+  }
+
+  function addBtn() {
+    return `<div style="padding:5px 10px;font-size:10px;color:#94A3B8;cursor:pointer;display:flex;align-items:center;gap:5px;border-top:1px dashed #E2E8F0;">
+      <span style="width:16px;height:16px;border-radius:50%;background:#E2E8F0;display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1;color:#64748B;">+</span>
+      Ajouter une ligne
+    </div>`;
+  }
+
+  function sectionHeader(label, color, bg) {
+    return `<div style="padding:8px 12px;background:${bg};border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:800;color:${color};display:flex;align-items:center;gap:6px;">${label}</div>`;
+  }
+
+  function zonePool(items, color, bg, label) {
+    const tags = items.length
+      ? items.map(i => tag(i, C.chantier.main, C.chantier.bg)).join('')
+      : `<span style="font-size:10px;color:#94A3B8;font-style:italic;">Aucun</span>`;
+    return `<div style="width:${POOL_W};min-width:${POOL_W};border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;background:#FFFFFF;display:flex;flex-direction:column;">
+      <div style="padding:6px 10px;background:${bg};border-bottom:1px solid #E2E8F0;font-size:11px;font-weight:700;color:${color};flex-shrink:0;">🏗 Chantiers ${label}</div>
+      <div style="flex:1;overflow-y:auto;padding:6px 8px;display:flex;flex-wrap:wrap;gap:3px;align-content:flex-start;">${tags}</div>
+    </div>`;
+  }
+
+  function zoneRow(zoneHtml, poolHtml) {
+    return `<div style="display:flex;gap:8px;align-items:stretch;">${zoneHtml}${poolHtml}</div>`;
+  }
+
+  function poolTags(title, items, color, bg) {
+    const tags = items.length
+      ? items.map(i => tag(i, color, bg)).join('')
+      : `<span style="font-size:10px;color:#94A3B8;font-style:italic;">Aucun</span>`;
+    return `<div style="margin-bottom:8px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:${color};margin-bottom:4px;">${title}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;padding:5px;background:${bg}88;border-radius:6px;min-height:26px;border:1px dashed ${color}33;">${tags}</div>
+    </div>`;
+  }
+
+  function poolVehiculeSection() {
+    return `<div style="border:1px solid ${C.vehicule.main}33;border-radius:6px;overflow:hidden;background:${C.vehicule.bg}88;">
+      ${poolVehicules.map(v => `<div style="padding:3px 8px;border-bottom:1px solid #F1F5F9;font-size:11px;font-weight:600;color:${C.vehicule.main};">${v}</div>`).join('')}
+    </div>`;
+  }
+
+  function chantierZone() {
+    const colH = `<div style="display:flex;background:#F8FAFC;border-bottom:2px solid #E2E8F0;">
+      <div style="flex:1.5;padding:5px 8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:${C.chantier.main};border-right:1px solid #E2E8F0;text-align:center;">🏗 Chantiers associés</div>
+      <div style="flex:1;padding:5px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:${C.personnel.main};border-right:1px solid #E2E8F0;text-align:center;">👤 Personnel</div>
+      <div style="flex:1;padding:5px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:${C.vehicule.main};border-right:1px solid #E2E8F0;text-align:center;">🚛 Véhicules</div>
+      <div style="width:90px;min-width:90px;padding:5px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:#94A3B8;text-align:center;">💬</div>
+    </div>`;
+    const rows = chantierRows.map(r => {
+      const personnelTags = [
+        ...r.personnel.map(p => tag(p, C.personnel.main, C.personnel.bg)),
+        ...r.soustraitants.map(s => tag(s, C.soustraitant.main, C.soustraitant.bg)),
+      ].join('') || `<span style="font-size:10px;color:${C.personnel.main}55;font-style:italic;">Personnel</span>`;
+      const chantierTags = r.chantiers.map(c => tag(c, C.chantier.main, C.chantier.bg)).join('')
+        || `<span style="font-size:10px;color:${C.chantier.main}55;font-style:italic;">Chantiers</span>`;
+      const vehiculeTags = r.vehicules.map(v => tag(v, C.vehicule.main, C.vehicule.bg)).join('')
+        || `<span style="font-size:10px;color:${C.vehicule.main}55;font-style:italic;">Véhicules</span>`;
+      return `<div style="display:flex;align-items:stretch;border-bottom:1px solid #F1F5F9;min-height:36px;">
+        <div style="flex:1.5;min-height:26px;padding:3px 4px;display:flex;flex-wrap:wrap;align-items:center;gap:2px;background:${C.chantier.bg}55;border-right:1px solid #F1F5F9;border-radius:4px;margin:2px;">${chantierTags}</div>
+        <div style="flex:1;min-height:26px;padding:3px 4px;display:flex;flex-wrap:wrap;align-items:center;gap:2px;background:${C.personnel.bg}55;border-right:1px solid #F1F5F9;border-radius:4px;margin:2px;">${personnelTags}</div>
+        <div style="flex:1;min-height:26px;padding:3px 4px;display:flex;flex-wrap:wrap;align-items:center;gap:2px;background:${C.vehicule.bg}55;border-right:1px solid #F1F5F9;border-radius:4px;margin:2px;">${vehiculeTags}</div>
+        ${commentZone(r.commentaire)}
+      </div>`;
+    }).join('');
+    return `<div style="flex:1;min-width:0;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;">
+      ${sectionHeader('🏗 Chantier', C.chantier.main, C.chantier.bg)}
+      ${colH}
+      <div style="flex:1;overflow-y:auto;min-height:900px;">${rows}</div>
+      ${addBtn()}
+    </div>`;
+  }
+
+  function multiLineZone(lines, zoneColor, zoneBg, zoneLabel, minH) {
+    const colH = `<div style="display:flex;background:#F8FAFC;border-bottom:1px solid #E2E8F0;">
+      <div style="flex:1.5;padding:4px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:${C.chantier.main};border-right:1px solid #E2E8F0;text-align:center;">🏗 Chantiers associés</div>
+      <div style="flex:1;padding:4px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:${C.personnel.main};border-right:1px solid #E2E8F0;text-align:center;">👤 Personnel</div>
+      <div style="width:90px;min-width:90px;padding:4px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:#94A3B8;text-align:center;">💬</div>
+    </div>`;
+    const rows = lines.map(l => `
+      <div style="display:flex;align-items:stretch;min-height:32px;border-bottom:1px solid #F1F5F9;">
+        ${dropZone(l.chantiers, C.chantier.main, C.chantier.bg, 'Chantiers', 1.5)}
+        ${dropZone([l.personnel], C.personnel.main, C.personnel.bg, 'Personnel', 1)}
+        ${commentZone(l.commentaire)}
+      </div>`).join('');
+    return `<div style="flex:1;min-width:0;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;">
+      ${sectionHeader(zoneLabel, zoneColor, zoneBg)}
+      ${colH}
+      <div style="flex:1;overflow-y:auto;min-height:${minH || 38}px;">${rows}</div>
+      ${addBtn()}
+    </div>`;
+  }
+
+  function bureauZone() {
+    return `<div style="flex:1;min-width:0;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;">
+      ${sectionHeader('🏢 Bureau', C.bureau.main, C.bureau.bg)}
+      <div style="flex:1;padding:6px 8px;display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start;min-height:38px;">
+        ${bureau.map(p => tag(p, C.bureau.main, C.bureau.bg)).join('') || '<span style="font-size:10px;color:#94A3B8;font-style:italic;">Personnel au bureau</span>'}
+      </div>
+    </div>`;
+  }
+
+  function absenceZone() {
+    const cols = absenceTypes.map(a => `
+      <div style="flex:1;min-width:90px;display:flex;flex-direction:column;border-right:1px solid #E2E8F0;">
+        <div style="padding:5px 6px;font-size:10px;font-weight:700;color:${C.absence.main};background:#FEF2F2;border-bottom:1px solid #E2E8F0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.type}</div>
+        <div style="padding:5px 6px;display:flex;flex-direction:column;gap:3px;min-height:32px;">
+          ${a.personnel.length
+            ? a.personnel.map(p => tag(p, C.absence.main, C.absence.bg)).join('')
+            : '<span style="font-size:10px;color:#CBD5E1;font-style:italic;">—</span>'}
+        </div>
+      </div>`).join('');
+    return `<div style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+      ${sectionHeader('🚫 Absences / Indisponibilités', C.absence.main, C.absence.bg)}
+      <div style="display:flex;overflow-x:auto;">${cols}</div>
+    </div>`;
+  }
+
+  const today = new Date();
+  const days   = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const months = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const dateStr = `${days[today.getDay()]} ${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  const equipesPool = `
+    <div style="width:${POOL_W};min-width:${POOL_W};border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;background:#FFFFFF;display:flex;flex-direction:column;">
+      <div style="padding:7px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:11px;font-weight:700;color:#1E293B;text-align:center;flex-shrink:0;">Équipes</div>
+      <div style="flex:1;overflow-y:auto;padding:8px;">
+        ${poolTags('👤 Personnel', poolPersonnel, C.personnel.main, C.personnel.bg)}
+        ${poolTags('🤝 Sous-traitants', poolSoustraitant, C.soustraitant.main, C.soustraitant.bg)}
+      </div>
+    </div>`;
+
+  const vehiculesPool = `
+    <div style="width:${POOL_W};min-width:${POOL_W};border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;background:#FFFFFF;display:flex;flex-direction:column;">
+      <div style="padding:7px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:11px;font-weight:700;color:${C.vehicule.main};text-align:center;flex-shrink:0;">🚛 Véhicules</div>
+      <div style="flex:1;overflow-y:auto;padding:8px;">${poolVehiculeSection()}</div>
+    </div>`;
+
+  const html = `
+    <div style="display:flex;flex-direction:column;gap:8px;padding:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F1F5F9;min-height:100vh;">
+
+      <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:10px;position:relative;">
+        <div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:5px;background:#E2E8F0;color:#64748B;font-size:14px;font-weight:700;cursor:pointer;">&#x2039;</div>
+        <span style="font-size:14px;font-weight:700;color:#1E293B;">${dateStr}</span>
+        <div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:5px;background:#E2E8F0;color:#64748B;font-size:14px;font-weight:700;cursor:pointer;">&#x203A;</div>
+        <div style="position:absolute;right:12px;display:flex;gap:6px;">
+          <div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:5px;background:#E2E8F0;color:#64748B;cursor:pointer;" title="Copier la veille">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </div>
+          <div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:5px;background:#E2E8F0;color:#64748B;cursor:pointer;" title="Imprimer" onclick="window.print()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          </div>
+        </div>
+      </div>
+
+      ${zoneRow(chantierZone(), equipesPool)}
+      ${zoneRow(multiLineZone(transportLines,  C.transport.main, C.transport.bg, '🚚 Transport',  38),  zonePool(poolChantiersParZone.transport,  C.transport.main, C.transport.bg,  'Transport'))}
+      ${zoneRow(multiLineZone(k2Lines,         C.k2.main,        C.k2.bg,        '🏗 K2',         190), zonePool(poolChantiersParZone.k2,         C.k2.main,        C.k2.bg,         'K2'))}
+      ${zoneRow(multiLineZone(finitionK2Lines, C.finition.main,  C.finition.bg,  '✨ Finition K2', 190), zonePool(poolChantiersParZone.finitionK2, C.finition.main,  C.finition.bg,   'Finition K2'))}
+      ${zoneRow(multiLineZone(atelierLines,    C.atelier.main,   C.atelier.bg,   '🔧 Atelier',    190), zonePool(poolChantiersParZone.atelier,    C.atelier.main,   C.atelier.bg,    'Atelier'))}
+
+      ${zoneRow(bureauZone(), vehiculesPool)}
+      ${absenceZone()}
+    </div>
+  `;
+
+  document.getElementById('root').innerHTML = html;
+})();
+</script>
+</body>
+</html>

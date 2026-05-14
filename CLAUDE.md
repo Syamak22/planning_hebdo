@@ -191,9 +191,3 @@ reader.readAsDataURL(blob);
 5. **`@keyframes` globaux** → inclure `instanceId` dans le nom.
 
 → Voir [docs/lessons-learned.md](docs/lessons-learned.md) pour tous les apprentissages détaillés.
-
----
-
-## Date de dernière mise à jour
-
-2026-02-26 — basé sur le plugin `planning_hebdo` (initialize2.js + update2.js)
