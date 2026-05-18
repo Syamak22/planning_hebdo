@@ -23,6 +23,14 @@ function(instance, properties, context) {
   instance.data.isDisplay = !!properties.is_display;
   instance.data.isOff     = !!properties.jour_off;
 
+  var ttList = readList(properties.table_abs_tt);
+  var ttMap  = {};
+  ttList.forEach(function(u) {
+    var name = u && typeof u.get === 'function' ? u.get(properties.field_user_name) : null;
+    if (name) ttMap[name] = true;
+  });
+  instance.data.teletravailUsers = ttMap;
+
   // ============================================================
   // GUARDS
   // ============================================================
@@ -93,7 +101,7 @@ function(instance, properties, context) {
     // SANS try/catch → NotReadyError se propage → Bubble enregistre
     // la dépendance et re-run quand les champs sont chargés.
     // ----------------------------------------------------------
-    var hash = 'display:' + (instance.data.isDisplay ? '1' : '0') + '|off:' + (instance.data.isOff ? '1' : '0') + '|date:' + (dayDate ? dayDate.toISOString() : '');
+    var hash = 'display:' + (instance.data.isDisplay ? '1' : '0') + '|off:' + (instance.data.isOff ? '1' : '0') + '|tt:' + Object.keys(ttMap).join(',') + '|date:' + (dayDate ? dayDate.toISOString() : '');
     hash += '|u:' + userItems.length;
     hash += '|s:' + sttItems.length;
     hash += '|v:' + vehItems.length;

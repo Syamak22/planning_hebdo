@@ -722,8 +722,11 @@ function(instance, context) {
         : '';
       var cnt2 = countMap[name] || 0;
       var badge = cnt2 > 1 ? '<span class="ph-dup-badge">' + cnt2 + '</span>' : '';
+      var tt = (type === 'equipier' && instance.data.teletravailUsers && instance.data.teletravailUsers[name])
+        ? '<span style="display:inline-block;padding:0 4px;border-radius:3px;background:#DBEAFE;border:1px solid #93C5FD;color:#1D4ED8;font-size:9px;font-weight:700;line-height:14px;margin-left:3px;flex-shrink:0;">TT</span>'
+        : '';
       var style = 'color:' + colorMain + ';background:' + colorBg + ';border:' + border + ';' + (extraStyle || '');
-      return '<span class="ph-tag" style="' + style + '" ' + dragAttrs + '>' + badge + name + rm + '</span>';
+      return '<span class="ph-tag" style="' + style + '" ' + dragAttrs + '>' + badge + name + tt + rm + '</span>';
     }
 
     function makeDragAttrs(type, name, poolKey, zone, row, col, origPool) {
