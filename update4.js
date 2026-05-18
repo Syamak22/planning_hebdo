@@ -21,6 +21,7 @@ function(instance, properties, context) {
   var fieldChDateDebut = properties.field_ch_date_debut;
   var fieldPlaRowId    = properties.field_pla_row_id;
   instance.data.isDisplay = !!properties.is_display;
+  instance.data.isOff     = !!properties.jour_off;
 
   // ============================================================
   // GUARDS
@@ -92,7 +93,7 @@ function(instance, properties, context) {
     // SANS try/catch → NotReadyError se propage → Bubble enregistre
     // la dépendance et re-run quand les champs sont chargés.
     // ----------------------------------------------------------
-    var hash = 'display:' + (instance.data.isDisplay ? '1' : '0') + '|date:' + (dayDate ? dayDate.toISOString() : '');
+    var hash = 'display:' + (instance.data.isDisplay ? '1' : '0') + '|off:' + (instance.data.isOff ? '1' : '0') + '|date:' + (dayDate ? dayDate.toISOString() : '');
     hash += '|u:' + userItems.length;
     hash += '|s:' + sttItems.length;
     hash += '|v:' + vehItems.length;
@@ -356,6 +357,7 @@ function(instance, properties, context) {
 
     st.rows     = rows;
     st.absences = absences;
+    st.isOff    = instance.data.isOff;
     // Fusionner avec les IDs générés localement (pour ne pas perdre un ID créé avant la synchro BDD)
     var existingAbsRowIds = instance.data.absenceRowIdMap || {};
     Object.keys(existingAbsRowIds).forEach(function(m) {

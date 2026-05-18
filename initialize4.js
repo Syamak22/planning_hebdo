@@ -1069,6 +1069,7 @@ function(instance, context) {
       + '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:10px;position:relative;">'
       + '<div class="ph-icon-btn ph-date-prev">&#x2039;</div>'
       + '<span class="ph-date-label" style="font-size:14px;font-weight:700;color:#1E293B;">' + dateStr + '</span>'
+      + (s.isOff ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;background:#FEF2F2;border:1px solid #FECACA;font-size:10px;font-weight:700;letter-spacing:0.06em;color:#EF4444;text-transform:uppercase;">&#x26D4; Jour off</span>' : '')
       + '<div class="ph-icon-btn ph-date-next">&#x203A;</div>'
       + (function() {
           var today = new Date(); today.setHours(0,0,0,0);
