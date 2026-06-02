@@ -178,6 +178,11 @@ function(instance, context) {
     '.' + ID + ' .ph-loader-fill { height:100%; background:#1E293B; border-radius:5px; transition:width 0.4s ease-out; width:0%; }',
     '.' + ID + ' .ph-loader-pct { font-size:11px; font-weight:700; color:#1E293B; letter-spacing:0.04em; }',
     '.' + ID + ' .ph-loader-box.ph-loader-done .ph-loader-fill { background:#10B981; }',
+    '@keyframes ph-shimmer-' + instanceId + ' { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }',
+    '.' + ID + ' .ph-skeleton-zone { background:#fff; border:1px solid #E2E8F0; border-left:4px solid #E2E8F0; border-radius:8px; overflow:hidden; flex:1; min-width:0; }',
+    '.' + ID + ' .ph-skeleton-bar { height:14px; border-radius:4px; background:linear-gradient(90deg,#E2E8F0 25%,#F1F5F9 50%,#E2E8F0 75%); background-size:400px 100%; animation:ph-shimmer-' + instanceId + ' 1.4s ease-in-out infinite; }',
+    '.' + ID + ' .ph-skeleton-row { display:flex; gap:12px; align-items:center; padding:10px 12px; border-bottom:1px solid #F1F5F9; }',
+    '.' + ID + ' .ph-skeleton-header { padding:10px 12px; border-bottom:1px solid #E2E8F0; background:#F8FAFC; }',
     '.' + ID + ' .ph-comment { padding:4px 6px; display:flex; align-items:center; gap:4px; font-size:10px; color:#64748B; font-style:italic; border-bottom:' + SEP_ROW + '; cursor:pointer; word-break:break-word; overflow-wrap:break-word; position:relative; }',
     '.' + ID + ' .ph-comment span { white-space:pre-wrap; word-break:break-word; overflow-wrap:break-word; flex:1; }',
     '.' + ID + ' .ph-comment:hover { background:#F8FAFC; }',
@@ -254,6 +259,7 @@ function(instance, context) {
     // --- TV view : compact bottom zones ---
     '.' + ID + ' .ph-tv-bottom { display:flex; flex-direction:column; gap:16px; }',
     '.' + ID + ' .ph-tv-ch-card-hd .ph-dv-tag { white-space:normal; word-break:break-word; }',
+    '.' + ID + ' .ph-tv-ch-card-tags .ph-dv-tag { white-space:normal; word-break:break-word; max-width:100%; }',
     '.' + ID + ' .ph-tv-cpt-zone { width:100%; background:#FFF; border:1px solid #E2E8F0; border-radius:8px; overflow:hidden; box-sizing:border-box; }',
     '.' + ID + ' .ph-tv-cpt-zone-abs { }',
     '.' + ID + ' .ph-tv-cpt-zone-hd { padding:7px 14px; font-size:clamp(12px,1.3vw,15px); font-weight:800; border-left:4px solid; background:#FFF; border-radius:0; letter-spacing:0.2px; border-bottom:1px solid #E2E8F0; }',
@@ -271,6 +277,12 @@ function(instance, context) {
     '.' + ID + ' .ph-tv-abs-motif { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; }',
     '.' + ID + ' .ph-tv-abs-name { font-size:13px; font-weight:500; color:#1E293B; }',
     '.' + ID + ' .ph-tv-cpt-row { display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:7px 16px; border-bottom:1px solid #F1F5F9; font-size:13px; line-height:1.5; }',
+    // --- Conducteur ---
+    '.' + ID + ' .ph-conduc-line { display:flex; align-items:center; gap:4px; padding:1px 4px 2px; font-size:10px; color:#059669; width:100%; border-top:1px dashed #A7F3D0; margin-top:2px; }',
+    '.' + ID + ' .ph-conduc-name { flex:1; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }',
+    '.' + ID + ' .ph-conduc-none { color:#CBD5E1 !important; font-weight:400 !important; }',
+    '.' + ID + ' .ph-conduc-edit { cursor:pointer; color:#94A3B8; font-size:10px; flex-shrink:0; padding:1px 3px; border-radius:2px; line-height:1; }',
+    '.' + ID + ' .ph-conduc-edit:hover { color:#059669; background:#D1FAE5; }',
     // --- Date label cliquable ---
     '.' + ID + ' .ph-date-label { cursor:pointer; padding:2px 6px; border-radius:4px; transition:background 0.15s; }',
     '.' + ID + ' .ph-date-label:hover { background:#F1F5F9; }',
@@ -305,8 +317,9 @@ function(instance, context) {
   // ============================================================
   // ÉTAT
   // ============================================================
+  instance.data.dateInitialized = false;
   instance.data.state = {
-    date: new Date(),
+    date: (function() { var _d = new Date(); _d.setHours(0,0,0,0); return _d; }()),
     rows: {
       chantier:  [],
       transport: [],
@@ -573,6 +586,52 @@ function(instance, context) {
     });
   }
 
+  function showConducteurPicker(anchor, zone, rowIdx) {
+    closeChantierPicker();
+    var st  = instance.data.state;
+    var row = st.rows[zone] && st.rows[zone][parseInt(rowIdx)];
+    if (!row) return;
+    var equipiers = (row.equipiers || []).filter(function(e) { return e.type === 'equipier'; });
+    if (!equipiers.length) return;
+
+    var picker = document.createElement('div');
+    picker.className = 'ph-chantier-picker';
+    picker.style.cssText = 'position:fixed;z-index:9999;background:#FFF;border:1px solid #E2E8F0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);min-width:190px;display:flex;flex-direction:column;overflow:hidden;top:-9999px;left:-9999px;';
+    document.body.appendChild(picker);
+    instance.data.activePicker = picker;
+
+    var currentCondName = row.conducteur ? row.conducteur.name : null;
+
+    picker.innerHTML = '<div style="padding:6px 10px;border-bottom:1px solid #E2E8F0;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;flex-shrink:0;">Conducteur</div>'
+      + '<div class="ph-cp-list">'
+      + equipiers.map(function(e) {
+          var isSel = e.name === currentCondName;
+          return '<div class="ph-cp-item" data-cond-name="' + encodeURIComponent(e.name) + '" style="padding:8px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #F8FAFC;color:' + (isSel ? '#1D4ED8' : '#1E293B') + ';background:' + (isSel ? '#EFF6FF' : '#FFF') + ';">'
+            + '<span>' + e.name + '</span>'
+            + (isSel ? '<span style="color:#10B981;font-size:10px;">✓</span>' : '')
+            + '</div>';
+        }).join('')
+      + '</div>';
+
+    positionPicker(picker, anchor);
+    pickerCleanupSetup(picker, anchor);
+
+    picker.querySelector('.ph-cp-list').addEventListener('click', function(e) {
+      var item = e.target.closest('[data-cond-name]');
+      if (!item) return;
+      var name    = decodeURIComponent(item.dataset.condName);
+      var res     = instance.data.resourceMap && instance.data.resourceMap[name];
+      var userObj = res ? res.obj : null;
+      row.conducteur = { name: name, obj: userObj };
+      closeChantierPicker(true);
+      resetStates();
+      instance.publishState('tag_conducteur', userObj);
+      instance.publishState('row_id_drop',   row.rowId || '');
+      instance.triggerEvent('conducteur_changed');
+      render();
+    });
+  }
+
   function showChantierPicker(dzEl) {
     closeChantierPicker();
     var zone  = dzEl.dataset.dzZone;
@@ -689,16 +748,7 @@ function(instance, context) {
   function render() {
     var s   = instance.data.state;
     var cnt = instance.data.container;
-    // Compléter le loader si visible
     if (instance.data.loaderTimer) { clearInterval(instance.data.loaderTimer); instance.data.loaderTimer = null; }
-    var loaderFill = cnt.querySelector('.ph-loader-fill');
-    var loaderPct  = cnt.querySelector('.ph-loader-pct');
-    var loaderBox  = cnt.querySelector('.ph-loader-box');
-    if (loaderFill) {
-      loaderFill.style.width = '100%';
-      if (loaderPct) loaderPct.textContent = '100 %';
-      if (loaderBox) loaderBox.classList.add('ph-loader-done');
-    }
     var prevWrap = cnt.querySelector('.ph-wrap');
     var savedScroll = prevWrap ? prevWrap.scrollTop : 0;
     var savedPickerState = instance.data.openPickerState || null;
@@ -867,6 +917,20 @@ function(instance, context) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    // Cell véhicule avec ligne conducteur
+    function vehicleCellHtml(items, zone, rowId, conducteur) {
+      var base = dropZoneHtml(items, C.vehicule.main, C.vehicule.bg, LABELS.noVehicule, 0, C.vehicule.main, zone, 'vehicule', rowId);
+      if (!items || !items.length) return base;
+      var condName = conducteur ? conducteur.name : null;
+      var condLine = '<div class="ph-conduc-line" data-cond-zone="' + zone + '" data-cond-row="' + rowId + '">'
+        + '👤 <span class="' + (condName ? 'ph-conduc-name' : 'ph-conduc-name ph-conduc-none') + '">'
+        + (condName ? escHtml(condName) : '—')
+        + '</span>'
+        + '<span class="ph-conduc-edit" data-cond-edit-zone="' + zone + '" data-cond-edit-row="' + rowId + '" title="Changer le conducteur">✎</span>'
+        + '</div>';
+      return base.slice(0, -6) + condLine + '</div>';
+    }
+
     // Retourne les lignes padées jusqu'au minimum
     function padRows(rows, zone) {
       var min = MIN_ROWS[zone] !== undefined ? MIN_ROWS[zone] : 0;
@@ -881,7 +945,7 @@ function(instance, context) {
         if (zone === 'chantier')  return { chantiers:[], equipiers:[], vehicules:[], commentaire:'' };
         if (zone === 'transport') return { chantiers:[], equipiers:[], vehicule:null, commentaire:'' };
         if (zone === 'atelier')   return { poste:'', chantiers:[], equipiers:[], commentaire:'' };
-        if (zone === 'bureau')    return { equipiers:[], commentaire:'' };
+        if (zone === 'bureau')    return { equipiers:[], vehicule:null, commentaire:'' };
         return {};
       };
     }
@@ -899,7 +963,7 @@ function(instance, context) {
         return '<div style="display:contents;">'
           + dropZoneHtml(r.chantiers,  C.chantier.main, C.chantier.bg, LABELS.noChantier, 0, C.chantier.main, 'chantier', 'chantiers', i)
           + dropZoneHtml(r.equipiers,  C.equipier.main, C.equipier.bg, LABELS.noEquipier, 0, C.equipier.main, 'chantier', 'equipier',  i)
-          + dropZoneHtml(r.vehicules,  C.vehicule.main, C.vehicule.bg, LABELS.noVehicule, 0, C.vehicule.main, 'chantier', 'vehicule',  i)
+          + vehicleCellHtml(r.vehicules, 'chantier', i, r.conducteur)
           + commentHtml(r.commentaire, 'chantier', i)
           + deleteCell('chantier', i)
           + '</div>';
@@ -927,7 +991,7 @@ function(instance, context) {
         return '<div style="display:contents;">'
           + dropZoneHtml(r.chantiers,                  C.chantier.main, C.chantier.bg, LABELS.noChantier, 0, C.chantier.main, 'transport', 'chantiers', i)
           + dropZoneHtml(r.equipiers||[],              C.equipier.main, C.equipier.bg, LABELS.noEquipier, 0, C.equipier.main, 'transport', 'equipier',  i)
-          + dropZoneHtml(r.vehicule ? [r.vehicule]:[], C.vehicule.main, C.vehicule.bg, LABELS.noVehicule, 0, C.vehicule.main, 'transport', 'vehicule',  i)
+          + vehicleCellHtml(r.vehicule ? [r.vehicule] : [], 'transport', i, r.conducteur)
           + commentHtml(r.commentaire, 'transport', i)
           + deleteCell('transport', i)
           + '</div>';
@@ -981,12 +1045,14 @@ function(instance, context) {
     function buildBureauZone() {
       var cols = [
         { key:'equipier',    label:LABELS.cols.equipier,    color:C.equipier.main, gtc:'1fr' },
+        { key:'vehicule',    label:LABELS.cols.vehicule,    color:C.vehicule.main, gtc:'1fr' },
         { key:'commentaire', label:LABELS.cols.commentaire, color:'#94A3B8',       gtc:'1fr' },
         { key:'delete',      label:'',                      color:'transparent',   gtc:'20px' },
       ];
       var rows = padRows(s.rows.bureau, 'bureau').map(function(r, i) {
         return '<div style="display:contents;">'
           + dropZoneHtml(r.equipiers||[], C.bureau.main, C.bureau.bg, LABELS.noEquipier, 0, C.bureau.main, 'bureau', 'equipier', i)
+          + vehicleCellHtml(r.vehicule ? [r.vehicule] : [], 'bureau', i, r.conducteur || null)
           + commentHtml(r.commentaire, 'bureau', i)
           + deleteCell('bureau', i)
           + '</div>';
@@ -1068,27 +1134,28 @@ function(instance, context) {
 
     cnt.innerHTML = '<div class="' + ID + '"><div class="ph-wrap">'
 
-      // DATE HEADER
-      + '<div style="' + (s.isOff ? 'background:#FFF7ED;border:1px solid #FED7AA;' : 'background:#FFFFFF;border:1px solid #E2E8F0;') + 'border-radius:8px;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:10px;position:relative;">'
+      // DATE HEADER — groupe centré [←][date][→][Aujourd'hui], today toujours rendu (visibility)
+      + '<div style="' + (s.isOff ? 'background:#FFF7ED;border:1px solid #FED7AA;' : 'background:#FFFFFF;border:1px solid #E2E8F0;') + 'border-radius:8px;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:6px;position:relative;">'
       + '<div class="ph-icon-btn ph-date-prev">&#x2039;</div>'
-      + '<span class="ph-date-label" style="font-size:14px;font-weight:700;color:#1E293B;">' + dateStr + '</span>'
+      + '<span class="ph-date-label" style="font-size:14px;font-weight:700;color:#1E293B;margin:0 4px;">' + dateStr + '</span>'
       + (s.isOff ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;background:#FFEDD5;border:1px solid #FED7AA;font-size:10px;font-weight:700;letter-spacing:0.06em;color:#EA580C;text-transform:uppercase;">&#x26D4; Jour off</span>' : '')
       + '<div class="ph-icon-btn ph-date-next">&#x203A;</div>'
       + (function() {
-          var today = new Date(); today.setHours(0,0,0,0);
-          var cur = new Date(d); cur.setHours(0,0,0,0);
-          return cur.getTime() === today.getTime() ? '' : '<div class="ph-today-btn">' + LABELS.today + '</div>';
-        }())
+            var today = new Date(); today.setHours(0,0,0,0);
+            var cur = new Date(d); cur.setHours(0,0,0,0);
+            var isToday = cur.getTime() === today.getTime();
+            return '<div class="ph-today-btn" style="visibility:' + (isToday ? 'hidden' : 'visible') + ';margin-left:4px;">' + LABELS.today + '</div>';
+          }())
       + '<div style="position:absolute;right:12px;display:flex;gap:6px;">'
       + '<div class="ph-icon-btn ph-copy-global" title="' + LABELS.copyGlobal + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div>'
       + (function() {
-          var allClosed = ALL_POOL_KEYS.every(function(k) { return instance.data.collapsedPools[k]; });
-          var title = allClosed ? 'Ouvrir tous les pools' : 'Fermer tous les pools';
-          var icon = allClosed
-            ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
-            : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/><line x1="12" y1="21" x2="12" y2="9"/></svg>';
-          return '<div class="ph-icon-btn ph-pools-toggle" title="' + title + '">' + icon + '</div>';
-        }())
+            var allClosed = ALL_POOL_KEYS.every(function(k) { return instance.data.collapsedPools[k]; });
+            var title = allClosed ? 'Ouvrir tous les pools' : 'Fermer tous les pools';
+            var icon = allClosed
+              ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+              : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/><line x1="12" y1="21" x2="12" y2="9"/></svg>';
+            return '<div class="ph-icon-btn ph-pools-toggle" title="' + title + '">' + icon + '</div>';
+          }())
       + '<div class="ph-icon-btn ph-print" title="' + LABELS.print + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></div>'
       + '</div>'
       + '</div>'
@@ -1155,18 +1222,41 @@ function(instance, context) {
     var chRowsFiltered = s.rows.chantier.filter(function(r) {
       return (r.chantiers&&r.chantiers.length)||(r.equipiers&&r.equipiers.length)||(r.vehicules&&r.vehicules.length)||r.commentaire;
     });
+    var TV_CHANTIER_COLOR = '#92400E';
+    var TV_CHANTIER_BG    = '#FFFBEB';
+
     var chCards = chRowsFiltered.map(function(r) {
-      var chHd = (r.chantiers||[]).map(function(c) { return dvTag(c.name, C.chantier.main, C.chantier.bg); }).join(' ');
+      var chHd = (r.chantiers||[]).map(function(c) { return dvTag(c.name, TV_CHANTIER_COLOR, TV_CHANTIER_BG); }).join(' ');
 
       var equipList    = r.equipiers || [];
       var equipiers    = equipList.filter(function(e) { return e.type !== 'soustraitant'; });
       var soustraitants = equipList.filter(function(e) { return e.type === 'soustraitant'; });
 
-      var vehName = r.vehicules && r.vehicules[0] ? r.vehicules[0].name : null;
+      var vehName  = r.vehicules && r.vehicules[0] ? r.vehicules[0].name : null;
+      var condName = r.conducteur ? r.conducteur.name : null;
+      var defaultCondEntry = vehName && instance.data.defaultConducteurMap ? instance.data.defaultConducteurMap[vehName] : null;
+      var defaultCondName = defaultCondEntry ? defaultCondEntry.name : null;
+      var ordreNum = vehName && instance.data.vehiculeOrdreMap && instance.data.vehiculeOrdreMap[vehName] !== undefined
+        ? instance.data.vehiculeOrdreMap[vehName]
+        : vehName;
+      var isLoc = vehName && instance.data.vehiculeLocMap && instance.data.vehiculeLocMap[vehName];
+      var locPrefix = isLoc ? '(L) - ' : '';
+      var vehDisplayHtml;
+      if (vehName) {
+        if (defaultCondName) {
+          if (condName && condName !== defaultCondName) {
+            vehDisplayHtml = locPrefix + esc(ordreNum) + ' - <s style="color:#94A3B8;font-weight:400;">' + esc(defaultCondName) + '</s> (' + esc(condName) + ')';
+          } else {
+            vehDisplayHtml = locPrefix + esc(ordreNum) + ' - ' + esc(defaultCondName);
+          }
+        } else {
+          vehDisplayHtml = locPrefix + (condName ? esc(ordreNum) + ' - ' + esc(condName) : esc(ordreNum));
+        }
+      }
       var vehSec = vehName
         ? '<div class="ph-tv-ch-card-sec ph-tv-ch-card-sec-veh">'
           + '<span class="ph-tv-ch-card-lbl">' + LABELS.emojis.vehicule + '</span>'
-          + '<span class="ph-tv-ch-veh-name">' + esc(vehName) + '</span>'
+          + '<span class="ph-tv-ch-veh-name">' + vehDisplayHtml + '</span>'
           + '</div>' : '';
 
       var allEquipe = equipiers.concat(soustraitants);
@@ -1197,15 +1287,34 @@ function(instance, context) {
       var equipList   = r.equipiers || [];
       var equipiers   = equipList.filter(function(e) { return e.type !== 'soustraitant'; }).map(function(e) { return e.name; });
       var stts        = equipList.filter(function(e) { return e.type === 'soustraitant'; }).map(function(e) { return e.name; });
-      var vehName     = zone === 'transport' ? (r.vehicule ? r.vehicule.name : '') : '';
+      var vehName     = (zone === 'transport' || zone === 'bureau') ? (r.vehicule ? r.vehicule.name : '') : '';
       var poste       = zone === 'atelier' ? (r.poste || '') : '';
 
       var parts = [];
-      if (poste)      parts.push('<span class="ph-tv-cpt-poste">' + esc(poste) + '</span>');
-      if (chantiers.length) parts.push('<span class="ph-tv-cpt-ch">' + EMOJIS.chantier + ' ' + chantiers.map(esc).join(', ') + '</span>');
-      if (vehName)    parts.push('<span class="ph-tv-cpt-veh">' + EMOJIS.vehicule + ' ' + esc(vehName) + '</span>');
-      if (equipiers.length) parts.push('<span class="ph-tv-cpt-eq">' + EMOJIS.equipier + ' ' + equipiers.map(function(n) { return esc(n) + multiSuffix(n); }).join(', ') + '</span>');
-      if (stts.length)      parts.push('<span class="ph-tv-cpt-stt">' + EMOJIS.soustraitant + ' ' + stts.map(function(n) { return esc(n) + multiSuffix(n); }).join(', ') + '</span>');
+      if (poste)            parts.push('<span class="ph-tv-cpt-poste">' + esc(poste) + '</span>');
+      if (chantiers.length) parts.push(chantiers.map(function(n) { return dvTag(n, TV_CHANTIER_COLOR, TV_CHANTIER_BG); }).join(' '));
+      if (vehName) {
+        var condNameCpt      = r.conducteur ? r.conducteur.name : null;
+        var defCondEntryCpt  = instance.data.defaultConducteurMap ? instance.data.defaultConducteurMap[vehName] : null;
+        var defCondNameCpt   = defCondEntryCpt ? defCondEntryCpt.name : null;
+        var ordreNumCpt      = instance.data.vehiculeOrdreMap && instance.data.vehiculeOrdreMap[vehName] !== undefined
+          ? instance.data.vehiculeOrdreMap[vehName] : vehName;
+        var isLocCpt    = instance.data.vehiculeLocMap && instance.data.vehiculeLocMap[vehName];
+        var locPrefixCpt = isLocCpt ? '(L) - ' : '';
+        var vehLabelCpt;
+        if (defCondNameCpt) {
+          if (condNameCpt && condNameCpt !== defCondNameCpt) {
+            vehLabelCpt = locPrefixCpt + esc(ordreNumCpt) + ' - <s style="color:#94A3B8;font-weight:400;">' + esc(defCondNameCpt) + '</s> (' + esc(condNameCpt) + ')';
+          } else {
+            vehLabelCpt = locPrefixCpt + esc(ordreNumCpt) + ' - ' + esc(defCondNameCpt);
+          }
+        } else {
+          vehLabelCpt = locPrefixCpt + (condNameCpt ? esc(ordreNumCpt) + ' - ' + esc(condNameCpt) : esc(ordreNumCpt));
+        }
+        parts.push('<span class="ph-tv-cpt-veh">' + EMOJIS.vehicule + ' ' + vehLabelCpt + '</span>');
+      }
+      if (equipiers.length) parts.push(equipiers.map(function(n) { return dvTag(n, C.equipier.main, C.equipier.bg); }).join(' '));
+      if (stts.length)      parts.push(stts.map(function(n) { return dvTag(n, C.soustraitant.main, C.soustraitant.bg); }).join(' '));
       if (r.commentaire) parts.push('<span class="ph-tv-cpt-comment">💬 ' + esc(r.commentaire) + '</span>');
 
       if (!parts.length) return '';
@@ -1234,7 +1343,7 @@ function(instance, context) {
         + abMotifs.map(function(m) {
             return '<div class="ph-tv-abs-col">'
               + '<div class="ph-tv-abs-motif" style="color:' + C.absence.main + ';">' + esc(m) + '</div>'
-              + (s.absences[m]||[]).map(function(n) { return '<div class="ph-tv-abs-name">' + esc(n) + '</div>'; }).join('')
+              + '<div class="ph-tv-abs-tags" style="display:flex;flex-wrap:wrap;gap:4px;">' + (s.absences[m]||[]).map(function(n) { return dvTag(n, C.absence.main, C.absence.bg); }).join('') + '</div>'
               + '</div>';
           }).join('')
         + '</div></div>';
@@ -1248,7 +1357,7 @@ function(instance, context) {
       + '<div class="ph-dv-wrap">'
       + '<div class="ph-dv-date">' + dateStr + '</div>'
       + '<div class="ph-tv-ch-section">'
-      + '<div class="ph-tv-ch-section-hd" style="color:' + C.chantier.main + ';border-left-color:' + C.chantier.main + ';display:flex;align-items:center;gap:8px;">' + LABELS.zones.chantier + '<span style="font-size:11px;font-weight:700;background:' + C.chantier.main + '22;color:' + C.chantier.main + ';border-radius:10px;padding:1px 8px;">' + chRowsFiltered.length + '</span></div>'
+      + '<div class="ph-tv-ch-section-hd" style="color:' + TV_CHANTIER_COLOR + ';border-left-color:' + TV_CHANTIER_COLOR + ';display:flex;align-items:center;gap:8px;">' + LABELS.zones.chantier + '<span style="font-size:11px;font-weight:700;background:' + TV_CHANTIER_COLOR + '22;color:' + TV_CHANTIER_COLOR + ';border-radius:10px;padding:1px 8px;">' + chRowsFiltered.length + '</span></div>'
       + (chCards ? '<div class="ph-tv-ch-grid">' + chCards + '</div>' : '<div class="ph-tv-empty">Aucun chantier planifié</div>')
       + '</div>'
       + bottomHtml
@@ -1737,12 +1846,65 @@ function(instance, context) {
 
   function showLoader() {
     if (instance.data.loaderTimer) { clearInterval(instance.data.loaderTimer); instance.data.loaderTimer = null; }
+    // Invalider le hash pour forcer un re-render même si on revient sur une date déjà vue
+    instance.data.lastMasterHash = null;
+    // Après le premier chargement : skeleton avec header date visible
+    if (instance.data.initialized) {
+      showSkeleton();
+      return;
+    }
     instance.data.container.innerHTML = '<div class="' + ID + '"><div class="ph-loader"><div class="ph-loader-box">'
       + '<div class="ph-loader-label">Chargement du planning...</div>'
       + '<div class="ph-loader-track"><div class="ph-loader-fill"></div></div>'
       + '<div class="ph-loader-pct">0 %</div>'
       + '</div></div></div>';
     startLoaderAnim();
+  }
+
+  function showSkeleton() {
+    var st = instance.data.state;
+    var d  = st ? st.date : null;
+    var dateStr = '';
+    if (d) {
+      var days  = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+      var months = ['jan.','fév.','mar.','avr.','mai','juin','juil.','aoû.','sep.','oct.','nov.','déc.'];
+      dateStr = days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    function skRow(w1, w2, w3) {
+      return '<div class="ph-skeleton-row">'
+        + '<div class="ph-skeleton-bar" style="width:' + w1 + ';flex-shrink:0;"></div>'
+        + '<div class="ph-skeleton-bar" style="width:' + w2 + ';flex-shrink:0;"></div>'
+        + (w3 ? '<div class="ph-skeleton-bar" style="width:' + w3 + ';flex-shrink:0;"></div>' : '')
+        + '</div>';
+    }
+
+    function skZone(color, nRows) {
+      var rows = '';
+      for (var i = 0; i < nRows; i++) {
+        var w1 = (55 + i * 17 % 30) + 'px';
+        var w2 = (90 + i * 23 % 50) + 'px';
+        rows += skRow(w1, w2, i % 2 === 0 ? (70 + i * 11 % 30) + 'px' : '');
+      }
+      return '<div class="ph-skeleton-zone" style="border-left-color:' + color + ';">'
+        + '<div class="ph-skeleton-header"><div class="ph-skeleton-bar" style="width:80px;"></div></div>'
+        + rows
+        + '</div>';
+    }
+
+    var C = { chantier:'#3B82F6', transport:'#F59E0B', atelier:'#8B5CF6', bureau:'#10B981' };
+    instance.data.container.innerHTML = '<div class="' + ID + '"><div class="ph-wrap">'
+      + '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:6px;position:relative;">'
+      + '<div class="ph-icon-btn ph-date-prev">&#x2039;</div>'
+      + '<span style="font-size:14px;font-weight:700;color:#1E293B;white-space:nowrap;margin:0 4px;">' + dateStr + '</span>'
+      + '<div class="ph-icon-btn ph-date-next">&#x203A;</div>'
+      + '<div class="ph-today-btn" style="visibility:hidden;margin-left:4px;">' + LABELS.today + '</div>'
+      + '</div>'
+      + '<div class="ph-zone-row">' + skZone(C.chantier, 3)   + '</div>'
+      + '<div class="ph-zone-row">' + skZone(C.transport, 2)  + '</div>'
+      + '<div class="ph-zone-row">' + skZone(C.atelier, 2)    + '</div>'
+      + '<div class="ph-zone-row">' + skZone(C.bureau, 1)     + '</div>'
+      + '</div></div>';
   }
 
   // ---- Pool Search Input ----
@@ -1793,9 +1955,17 @@ function(instance, context) {
       return;
     }
 
-    // Clic sur zone véhicule → ouvrir le picker véhicule
+    // Clic sur bouton ✎ conducteur
+    var condEdit = e.target.closest('[data-cond-edit-zone]');
+    if (condEdit) {
+      e.stopPropagation();
+      showConducteurPicker(condEdit, condEdit.dataset.condEditZone, condEdit.dataset.condEditRow);
+      return;
+    }
+
+    // Clic sur zone véhicule → ouvrir le picker véhicule (pas si clic dans la ligne conducteur)
     var dzVehicule = e.target.closest('[data-dz-col="vehicule"]');
-    if (dzVehicule && !e.target.closest('[data-rm]') && !e.target.closest('[data-dt]')) {
+    if (dzVehicule && !e.target.closest('[data-rm]') && !e.target.closest('[data-dt]') && !e.target.closest('.ph-conduc-line')) {
       instance.data.openPickerState = { col: 'vehicule', zone: dzVehicule.dataset.dzZone, rowId: dzVehicule.dataset.dzRow };
       showVehiculePicker(dzVehicule);
       return;
@@ -2117,10 +2287,13 @@ function(instance, context) {
   }
 
   function resetStates() {
+    var _sd = new Date(instance.data.state.date); _sd.setHours(0, 0, 0, 0);
+    instance.publishState('selected_date', _sd);
     instance.publishState('tag_user',      null);
     instance.publishState('tag_contact',   null);
     instance.publishState('tag_vehicule',  null);
     instance.publishState('tag_chantier',  null);
+    instance.publishState('tag_conducteur', null);
     instance.publishState('source_zone',   null);
     instance.publishState('drop_zone',     null);
     instance.publishState('row_id_source', '');
@@ -2272,7 +2445,7 @@ function(instance, context) {
     if (zone === 'chantier')  st.rows.chantier.push({ rowId: genRowId(), chantiers:[], equipiers:[], vehicules:[], commentaire:'' });
     if (zone === 'transport') st.rows.transport.push({ rowId: genRowId(), chantiers:[], equipiers:[], vehicule:null, commentaire:'' });
     if (zone === 'atelier')   st.rows.atelier.push({ rowId: genRowId(), poste:'', chantiers:[], equipiers:[], commentaire:'' });
-    if (zone === 'bureau')    st.rows.bureau.push({ rowId: genRowId(), equipiers:[], commentaire:'' });
+    if (zone === 'bureau')    st.rows.bureau.push({ rowId: genRowId(), equipiers:[], vehicule:null, commentaire:'' });
   }
 
   // ============================================================
@@ -2284,19 +2457,52 @@ function(instance, context) {
     var d = st.date;
     var dateStr = days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
 
+    var PRINT_COLORS = { chantier: '#92400E', equipier: '#1D4ED8', vehicule: '#065F46', soustraitant: '#5B21B6', poste: '#374151' };
     function pTag(name, color) {
       return '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;border:1px solid ' + color + ';color:' + color + ';margin:1px;">' + name + '</span>';
+    }
+
+    function vehCondPrint(vehName, conducteur) {
+      if (!vehName) return '—';
+      var ordreMap   = instance.data.vehiculeOrdreMap || {};
+      var defCondMap = instance.data.defaultConducteurMap || {};
+      var locMap     = instance.data.vehiculeLocMap || {};
+      var ordreNum   = ordreMap[vehName] !== undefined ? ordreMap[vehName] : vehName;
+      var defCond    = defCondMap[vehName] ? defCondMap[vehName].name : null;
+      var condName   = conducteur ? conducteur.name : null;
+      var locPfx     = locMap[vehName] ? '(L) - ' : '';
+      var label;
+      if (defCond) {
+        if (condName && condName !== defCond) {
+          label = locPfx + ordreNum + ' - <s style="color:#94A3B8;">' + defCond + '</s> (' + condName + ')';
+        } else {
+          label = locPfx + ordreNum + ' - ' + defCond;
+        }
+      } else {
+        label = locPfx + (condName ? ordreNum + ' - ' + condName : String(ordreNum));
+      }
+      return '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;border:1px solid ' + PRINT_COLORS.vehicule + ';color:' + PRINT_COLORS.vehicule + ';margin:1px;">' + label + '</span>';
     }
 
     function rowsHtml(rows, zoneName) {
       if (!rows || !rows.length) return '<tr><td colspan="5" style="padding:6px;color:#94A3B8;font-style:italic;">Aucune ligne</td></tr>';
       return rows.map(function(r) {
-        var chantiers = (r.chantiers||[]).map(function(c){ return pTag(c.name, '#F59E0B'); }).join(' ');
-        var equipiers = (r.equipiers||[]).map(function(e){ return pTag(e.name, '#3B82F6'); }).join(' ');
-        var vehicules = (r.vehicules||[]).concat(r.vehicule ? [r.vehicule] : []).map(function(v){ return pTag(v.name, '#10B981'); }).join(' ');
-        var poste     = r.poste ? pTag(r.poste, '#64748B') : '';
+        var chantiers = (r.chantiers||[]).map(function(c){ return pTag(c.name, PRINT_COLORS.chantier); }).join(' ');
+        var equipiers = (r.equipiers||[]).map(function(e){ return pTag(e.name, e.type === 'soustraitant' ? PRINT_COLORS.soustraitant : PRINT_COLORS.equipier); }).join(' ');
+        // Véhicule(s) avec conducteur
+        var vehObjs   = (r.vehicules||[]).concat(r.vehicule ? [r.vehicule] : []);
+        var vehicules = vehObjs.map(function(v) { return vehCondPrint(v.name, r.conducteur); }).join(' ');
+        var poste     = r.poste ? pTag(r.poste, PRINT_COLORS.poste) : '';
         var tdS = 'style="padding:4px 8px;word-break:break-word;vertical-align:top;"';
         var tdC = 'style="padding:4px 8px;font-size:10px;color:#64748B;font-style:italic;word-break:break-word;vertical-align:top;"';
+        if (zoneName === 'bureau') {
+          var buVeh = r.vehicule ? vehCondPrint(r.vehicule.name, r.conducteur) : '—';
+          return '<tr style="border-bottom:1px solid #eee;">'
+            + '<td ' + tdS + '>' + (equipiers || '—') + '</td>'
+            + '<td ' + tdS + '>' + buVeh + '</td>'
+            + '<td ' + tdC + '>' + (r.commentaire || '') + '</td>'
+            + '</tr>';
+        }
         return '<tr style="border-bottom:1px solid #eee;">'
           + (zoneName === 'atelier' ? '<td ' + tdS + '>' + poste + '</td>' : '')
           + '<td ' + tdS + '>' + (chantiers || '—') + '</td>'
@@ -2330,7 +2536,7 @@ function(instance, context) {
       + '@media print{body{padding:10px;}-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
       + '</style></head><body>'
       + '<h2 style="margin:0 0 16px;font-size:16px;color:#1E293B;">Planning du ' + dateStr + '</h2>'
-      + section('🏗 Chantier', '#F59E0B',
+      + section('🏗 Chantier', '#92400E',
           th('Chantiers') + th('Équipiers') + th('Véhicules') + th('Commentaire'),
           rowsHtml(st.rows.chantier, 'chantier'),
           ['35%','30%','15%','20%'])
@@ -2343,9 +2549,9 @@ function(instance, context) {
           rowsHtml(st.rows.atelier, 'atelier'),
           ['15%','35%','30%','20%'])
       + section('🏢 Bureau', '#0EA5E9',
-          th('Équipier') + th('Commentaire'),
+          th('Équipier') + th('Véhicule') + th('Commentaire'),
           rowsHtml(st.rows.bureau, 'bureau'),
-          ['50%','50%'])
+          ['40%','25%','35%'])
       + section('🚫 Absences', '#EF4444',
           th('Motif') + th('Équipiers'),
           absHtml,

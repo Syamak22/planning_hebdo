@@ -19,7 +19,9 @@ function(instance, properties, context) {
   var fieldPlaMotif    = properties.field_pla_motif_absence;
   var fieldPlaPoste    = properties.field_pla_poste_atelier;
   var fieldChDateDebut = properties.field_ch_date_debut;
-  var fieldPlaRowId    = properties.field_pla_row_id;
+  var fieldPlaRowId      = properties.field_pla_row_id;
+  var fieldPlaConducteur = properties.field_pla_conducteur;
+  var fieldVehLoc        = properties.field_veh_loc;
   instance.data.isDisplay = !!properties.is_display;
   instance.data.isOff     = !!properties.jour_off;
 
@@ -101,22 +103,23 @@ function(instance, properties, context) {
     // SANS try/catch → NotReadyError se propage → Bubble enregistre
     // la dépendance et re-run quand les champs sont chargés.
     // ----------------------------------------------------------
-    var hash = 'display:' + (instance.data.isDisplay ? '1' : '0') + '|off:' + (instance.data.isOff ? '1' : '0') + '|tt:' + Object.keys(ttMap).join(',') + '|date:' + (dayDate ? dayDate.toISOString() : '');
-    hash += '|u:' + userItems.length;
-    hash += '|s:' + sttItems.length;
-    hash += '|v:' + vehItems.length;
+    var dayDateNorm = dayDate ? (function() { var d = new Date(dayDate); d.setHours(0,0,0,0); return d; }()) : null;
+    var hash = 'display:' + (instance.data.isDisplay ? '1' : '0') + '|off:' + (instance.data.isOff ? '1' : '0') + '|tt:' + Object.keys(ttMap).join(',') + '|date:' + (dayDateNorm ? dayDateNorm.toISOString() : '');
+    hash += '|u:' + userItems.map(function(u) { return getField(u, fieldUserName) || ''; }).join(',');
+    hash += '|s:' + sttItems.map(function(s) { return getField(s, fieldSttName) || ''; }).join(',');
+    hash += '|v:' + vehItems.map(function(v) { return getField(v, fieldVehName) || ''; }).join(',');
     hash += '|vi:' + vehIndispo.map(function(v) { return v.get('_id'); }).join(',');
     hash += '|abs:' + absenceItems.length;
     hash += '|pos:' + posteItems.length;
     hash += '|chDeb:' + (fieldChDateDebut ? chAll.map(function(c) {
       var d = c.get(fieldChDateDebut); return d ? d.getTime() : '';
     }).join(',') : '');
-    hash += '|chJ:' + chJour.length;
-    hash += '|chT:' + chTrans.length;
-    hash += '|chK2:' + chK2.length;
-    hash += '|chFK2:' + chFinK2.length;
-    hash += '|chFab:' + chFab.length;
-    hash += '|chAll:' + chAll.length;
+    hash += '|chJ:' + chJour.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
+    hash += '|chT:' + chTrans.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
+    hash += '|chK2:' + chK2.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
+    hash += '|chFK2:' + chFinK2.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
+    hash += '|chFab:' + chFab.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
+    hash += '|chAll:' + chAll.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
     hash += '|pla:' + planItems.map(function(p) {
       if (!p || typeof p.get !== 'function') return '';
       var id      = p.get('_id') || '';
@@ -133,20 +136,28 @@ function(instance, properties, context) {
       var vehId     = (vehObj && typeof vehObj.get === 'function') ? (vehObj.get('_id') || '') : '';
       var posteOS   = fieldPlaPoste ? p.get(fieldPlaPoste) : null;
       var posteStr  = (posteOS && typeof posteOS.get === 'function') ? (posteOS.get('display') || '') : '';
-      var motifOS   = fieldPlaMotif ? p.get(fieldPlaMotif) : null;
-      var motifStr  = (motifOS && typeof motifOS.get === 'function') ? (motifOS.get('display') || '') : '';
-      return id + ':' + typeStr + ':' + eqLen + ':' + sttLen2 + ':' + chaLen + ':' + vehId + ':' + posteStr + ':' + motifStr;
+      var motifOS    = fieldPlaMotif ? p.get(fieldPlaMotif) : null;
+      var motifStr   = (motifOS && typeof motifOS.get === 'function') ? (motifOS.get('display') || '') : '';
+      var condObjPla = fieldPlaConducteur ? p.get(fieldPlaConducteur) : null;
+      var condIdPla  = (condObjPla && typeof condObjPla.get === 'function') ? (condObjPla.get('_id') || '') : '';
+      var comPla     = fieldPlaCom ? (p.get(fieldPlaCom) || '') : '';
+      return id + ':' + typeStr + ':' + eqLen + ':' + sttLen2 + ':' + chaLen + ':' + vehId + ':' + posteStr + ':' + motifStr + ':' + condIdPla + ':' + comPla;
     }).join(',');
 
     if (instance.data.lastMasterHash === hash) return;
 
     // ----------------------------------------------------------
     // DATE
+    // day_date utilisé uniquement à l'initialisation (st.date non encore définie).
+    // Permet aussi d'ouvrir le planning sur une date spécifique depuis Bubble
+    // en réinitialisant le plugin. Une fois la date définie, elle est gérée
+    // en interne par le plugin et day_date est ignoré.
     // ----------------------------------------------------------
     var st = instance.data.state;
-    if (dayDate) {
-      st.date = dayDate;
-      try { instance.publishState('selected_date', dayDate); } catch(e) {}
+    if (dayDateNorm && !instance.data.dateInitialized) {
+      st.date = dayDateNorm;
+      instance.data.dateInitialized = true;
+      try { instance.publishState('selected_date', dayDateNorm); } catch(e) {}
     }
 
     // ----------------------------------------------------------
@@ -187,6 +198,7 @@ function(instance, properties, context) {
 
     var allVehicules = [];
     var vehiculeOrdreMap = {};
+    var vehiculeLocMap = {};
     vehItems.forEach(function(v) {
       var name = getField(v, fieldVehName);
       if (!name) return;
@@ -196,8 +208,33 @@ function(instance, properties, context) {
         var ord = v.get(fieldOrdre);
         if (ord !== null && ord !== undefined) vehiculeOrdreMap[name] = Number(ord);
       }
+      if (fieldVehLoc) {
+        var isLoc = v.get(fieldVehLoc);
+        if (isLoc) vehiculeLocMap[name] = true;
+      }
     });
     instance.data.vehiculeOrdreMap = vehiculeOrdreMap;
+    instance.data.vehiculeLocMap   = vehiculeLocMap;
+
+    // MAP véhicule → conducteur par défaut (via field_conduc1 sur l'objet véhicule)
+    var defaultConducteurMap = {};
+    if (fieldConduc1) {
+      vehItems.forEach(function(v) {
+        var vName = getField(v, fieldVehName);
+        if (!vName) return;
+        try {
+          var cObj = v.get(fieldConduc1);
+          if (cObj && typeof cObj.get === 'function') {
+            var cName = getField(cObj, fieldUserName);
+            if (cName) {
+              defaultConducteurMap[vName] = { name: cName, obj: cObj };
+              if (!resourceMap[cName]) resourceMap[cName] = { obj: cObj, type: 'user' };
+            }
+          }
+        } catch(e) {}
+      });
+    }
+    instance.data.defaultConducteurMap = defaultConducteurMap;
 
     var allChJour  = chJour.map(function(c)  { return getField(c, fieldChName); }).filter(Boolean);
     var allChTrans = chTrans.map(function(c) { return getField(c, fieldChName); }).filter(Boolean);
@@ -284,6 +321,20 @@ function(instance, properties, context) {
       var vehName = vehObj && typeof vehObj.get === 'function' ? getField(vehObj, fieldVehName) : null;
       if (vehName) usedVehicules[vehName] = true;
 
+      // Conducteur (override planning ou défaut véhicule)
+      var conducteur = null;
+      var condObjRow = fieldPlaConducteur ? planObj.get(fieldPlaConducteur) : null;
+      if (condObjRow && typeof condObjRow.get === 'function') {
+        var cRowName = getField(condObjRow, fieldUserName);
+        if (cRowName) {
+          conducteur = { name: cRowName, obj: condObjRow };
+          if (!resourceMap[cRowName]) resourceMap[cRowName] = { obj: condObjRow, type: 'user' };
+        }
+      }
+      if (!conducteur && vehName && defaultConducteurMap[vehName]) {
+        conducteur = defaultConducteurMap[vehName];
+      }
+
       var typeNorm = typeStr.toLowerCase();
 
       if (typeNorm === 'absence') {
@@ -303,6 +354,7 @@ function(instance, properties, context) {
           chantiers:   chantiers,
           equipiers:   equipiers,
           vehicules:   vehName ? [{ name: vehName, type: 'vehicule' }] : [],
+          conducteur:  conducteur,
           commentaire: commentaire,
         });
 
@@ -312,6 +364,7 @@ function(instance, properties, context) {
           chantiers:   chantiers,
           equipiers:   equipiers,
           vehicule:    vehName ? { name: vehName, type: 'vehicule' } : null,
+          conducteur:  conducteur,
           commentaire: commentaire,
         });
 
@@ -330,6 +383,8 @@ function(instance, properties, context) {
         rows.bureau.push({
           rowId:       rowId,
           equipiers:   equipiers,
+          vehicule:    vehName ? { name: vehName, type: 'vehicule' } : null,
+          conducteur:  conducteur,
           commentaire: commentaire,
         });
       }
@@ -362,6 +417,27 @@ function(instance, properties, context) {
     st.pools.chantiers.k2          = allChK2.filter(function(n)    { return notInRows(n, rows.atelier);   });
     st.pools.chantiers.finitionK2  = allChFinK2.filter(function(n) { return notInRows(n, rows.atelier);   });
     st.pools.chantiers.fabrication = allChFab.filter(function(n)   { return notInRows(n, rows.atelier);   });
+
+    // Conserver les lignes "locales" (non encore sauvegardées en DB)
+    // Une ligne locale = rowId non présent dans aucun planItem
+    var dbRowIds = {};
+    planItems.forEach(function(p) {
+      if (!p || typeof p.get !== 'function') return;
+      var rid = fieldPlaRowId ? p.get(fieldPlaRowId) : null;
+      if (rid) dbRowIds[rid] = true;
+    });
+    var prevRenderDate = instance.data.lastRenderDate;
+    var dateUnchanged = prevRenderDate && st.date && prevRenderDate.getTime() === st.date.getTime();
+    if (dateUnchanged) {
+      ['chantier', 'transport', 'atelier', 'bureau'].forEach(function(zone) {
+        var prevRows = st.rows[zone] || [];
+        prevRows.forEach(function(r) {
+          if (r.rowId && !dbRowIds[r.rowId]) {
+            rows[zone].push(r);
+          }
+        });
+      });
+    }
 
     st.rows     = rows;
     st.absences = absences;
@@ -407,6 +483,7 @@ function(instance, properties, context) {
     // reste à sa valeur précédente → prochain appel réessaie.
     // ----------------------------------------------------------
     if (instance.data.render) instance.data.render();
-    instance.data.lastMasterHash = hash;
+    instance.data.lastMasterHash  = hash;
+    instance.data.lastRenderDate  = st.date;
   }
 }
