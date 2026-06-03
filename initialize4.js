@@ -16,6 +16,7 @@ function(instance, context) {
     vehicule:     '🏎️',
     soustraitant: '🤝',
     commentaire:  '💬',
+    conducteur:   '👨🏼‍✈️',
     // Affichage (display mode) — emojis plus expressifs
     eq_dv:        '👷🏻‍♂️',
     stt_dv:       '🤝',
@@ -42,10 +43,6 @@ function(instance, context) {
       soustraitants:EMOJIS.soustraitant + ' Sous-traitants',
       vehicules:    EMOJIS.vehicule     + ' Véhicules',
       chantier:     EMOJIS.chantier     + ' Chantier',
-      transport:    EMOJIS.chantier     + ' Chantiers transport',
-      k2:           EMOJIS.chantier     + ' Chantiers K2',
-      finitionK2:   EMOJIS.chantier     + ' Chantiers finition K2',
-      fabrication:  EMOJIS.chantier     + ' Chantiers fabrication',
     },
     // Alias vers EMOJIS pour le display mode
     emojis: {
@@ -104,13 +101,15 @@ function(instance, context) {
   };
 
   // Mapping pool → zone cible autorisée pour le drag de chantiers
-  var CHANTIER_POOL_TO_ZONE = {
-    chantier:    'chantier',
-    transport:   'transport',
-    k2:          'atelier',
-    finitionK2:  'atelier',
-    fabrication: 'atelier',
-  };
+  function getChantierPoolToZone() {
+    var transportSet = {};
+    (instance.data.atelierTransportTypes || []).forEach(function(t) { transportSet[t] = true; });
+    var map = { chantier: 'chantier' };
+    (instance.data.atelierTypes || []).forEach(function(t) {
+      map[t] = transportSet[t] ? 'transport' : 'atelier';
+    });
+    return map;
+  }
 
   var POOL_W = LAYOUT.pool_pct + '%';
 
@@ -359,7 +358,7 @@ function(instance, context) {
     if (drag.type === 'vehicule')     return targetCol === 'vehicule' && !drag.zone;
     if (drag.type === 'chantier') {
       if (targetCol !== 'chantiers') return false;
-      if (drag.poolKey) return CHANTIER_POOL_TO_ZONE[drag.poolKey] === targetZone;
+      if (drag.poolKey) return getChantierPoolToZone()[drag.poolKey] === targetZone;
       return drag.zone === targetZone;
     }
     return false;
@@ -591,7 +590,7 @@ function(instance, context) {
     var st  = instance.data.state;
     var row = st.rows[zone] && st.rows[zone][parseInt(rowIdx)];
     if (!row) return;
-    var equipiers = (row.equipiers || []).filter(function(e) { return e.type === 'equipier'; });
+    var equipiers = row.equipiers || [];
     if (!equipiers.length) return;
 
     var picker = document.createElement('div');
@@ -606,8 +605,10 @@ function(instance, context) {
       + '<div class="ph-cp-list">'
       + equipiers.map(function(e) {
           var isSel = e.name === currentCondName;
-          return '<div class="ph-cp-item" data-cond-name="' + encodeURIComponent(e.name) + '" style="padding:8px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #F8FAFC;color:' + (isSel ? '#1D4ED8' : '#1E293B') + ';background:' + (isSel ? '#EFF6FF' : '#FFF') + ';">'
-            + '<span>' + e.name + '</span>'
+          var isStt = e.type === 'soustraitant';
+          var dot = isStt ? '<span style="width:6px;height:6px;border-radius:50%;background:#7C3AED;display:inline-block;flex-shrink:0;"></span>' : '';
+          return '<div class="ph-cp-item" data-cond-name="' + encodeURIComponent(e.name) + '" data-cond-type="' + e.type + '" style="padding:8px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid #F8FAFC;color:' + (isSel ? '#1D4ED8' : '#1E293B') + ';background:' + (isSel ? '#EFF6FF' : '#FFF') + ';">'
+            + dot + '<span style="flex:1;">' + e.name + '</span>'
             + (isSel ? '<span style="color:#10B981;font-size:10px;">✓</span>' : '')
             + '</div>';
         }).join('')
@@ -620,12 +621,17 @@ function(instance, context) {
       var item = e.target.closest('[data-cond-name]');
       if (!item) return;
       var name    = decodeURIComponent(item.dataset.condName);
+      var condType = item.dataset.condType || 'equipier';
       var res     = instance.data.resourceMap && instance.data.resourceMap[name];
-      var userObj = res ? res.obj : null;
-      row.conducteur = { name: name, obj: userObj };
+      var resObj  = res ? res.obj : null;
+      row.conducteur = { name: name, obj: resObj, type: condType };
       closeChantierPicker(true);
       resetStates();
-      instance.publishState('tag_conducteur', userObj);
+      if (condType === 'soustraitant') {
+        instance.publishState('tag_conducteur_sst', resObj);
+      } else {
+        instance.publishState('tag_conducteur', resObj);
+      }
       instance.publishState('row_id_drop',   row.rowId || '');
       instance.triggerEvent('conducteur_changed');
       render();
@@ -692,7 +698,16 @@ function(instance, context) {
       if (!row.chantiers) row.chantiers = [];
 
       // Retire du pool de la zone si présent, et mémorise origPool pour le retour
-      var zonePoolKeys = { chantier: ['chantier'], transport: ['transport'], atelier: ['k2', 'finitionK2', 'fabrication'] };
+      var atelierTypesNow = instance.data.atelierTypes || [];
+      var _tSet2 = {};
+      (instance.data.atelierTransportTypes || []).forEach(function(t) { _tSet2[t] = true; });
+      var transportTypes   = atelierTypesNow.filter(function(t) { return !!_tSet2[t]; });
+      var atelierOnlyTypes = atelierTypesNow.filter(function(t) { return !_tSet2[t]; });
+      var zonePoolKeys = {
+        chantier:  ['chantier'],
+        transport: transportTypes,
+        atelier:   atelierOnlyTypes,
+      };
       var relevantPools = zonePoolKeys[zone] || [];
       var foundPool = null;
       relevantPools.forEach(function(pk) {
@@ -700,13 +715,17 @@ function(instance, context) {
         if (pool) { var idx = pool.indexOf(name); if (idx !== -1) { pool.splice(idx, 1); foundPool = pk; } }
       });
 
-      var POOL_TO_POSTE_PICKER = { k2: 'K2', finitionK2: 'Finition K2', fabrication: 'Fabrication' };
-      if (zone === 'atelier' && !row.poste) {
-        row.poste = POOL_TO_POSTE_PICKER[foundPool] || '';
+      if (zone === 'atelier' && foundPool) {
+        var CP_POOL_TO_POSTE = { '⚙️ K2': 'K2', '✅ Finitions K2': 'Finition K2', '🏭 Fabrication': 'Fabrication' };
+        var cpAutoPoste = CP_POOL_TO_POSTE[foundPool];
+        if (cpAutoPoste) row.poste = cpAutoPoste;
       }
 
       row.chantiers.push({ name: name, type: 'chantier', origPool: foundPool });
       added.push(name);
+      var cpAtelierComment = (zone === 'transport' || zone === 'atelier')
+        && instance.data.atelierChantierCommentMap && instance.data.atelierChantierCommentMap[name];
+      if (cpAtelierComment) { row.commentaire = cpAtelierComment; }
       var cpResource = instance.data.resourceMap && instance.data.resourceMap[name];
       resetStates();
       if (cpResource) instance.publishState('tag_chantier', cpResource.obj);
@@ -714,7 +733,9 @@ function(instance, context) {
       instance.publishState('drop_zone',     zoneLabel(zone));
       instance.publishState('row_id_drop',   row.rowId || '');
       if (zone === 'atelier') instance.publishState('poste_atelier', row.poste || '');
+      if (cpAtelierComment) instance.publishState('commentaire', cpAtelierComment);
       instance.triggerEvent('tag_moved');
+      if (cpAtelierComment) instance.triggerEvent('add_commentaire');
       renderList(searchEl.value);
       render();
     });
@@ -765,12 +786,12 @@ function(instance, context) {
       return d1.getTime() === d2.getTime();
     }
 
-    function tag(name, type, colorMain, colorBg, dragAttrs, removable, rmAttrs, extraStyle) {
+    function tag(name, type, colorMain, colorBg, dragAttrs, removable, rmAttrs, extraStyle, noBadge) {
       var border = '1px solid ' + colorMain + '22';
       var rm = removable
         ? '<span class="ph-tag-rm" ' + rmAttrs + '>✕</span>'
         : '';
-      var cnt2 = countMap[name] || 0;
+      var cnt2 = (!noBadge && countMap[name]) || 0;
       var badge = cnt2 > 1 ? '<span class="ph-dup-badge">' + cnt2 + '</span>' : '';
       var tt = (type === 'equipier' && instance.data.teletravailUsers && instance.data.teletravailUsers[name])
         ? '<span style="display:inline-block;padding:0 4px;border-radius:3px;background:#DBEAFE;border:1px solid #93C5FD;color:#1D4ED8;font-size:9px;font-weight:700;line-height:14px;margin-left:3px;flex-shrink:0;">TT</span>'
@@ -804,7 +825,7 @@ function(instance, context) {
       var da = makeDragAttrs(type, name, poolKey, null, null, null);
       var indispo = type === 'vehicule' && instance.data.indispoVehicules && instance.data.indispoVehicules[name];
       var extra = indispo ? 'color:#94A3B8;background:#F1F5F9;border:1px solid #94A3B8 !important;text-decoration:line-through;' : '';
-      return tag(name, type, colorMain, colorBg, da, false, '', extra);
+      return tag(name, type, colorMain, colorBg, da, false, '', extra, true);
     }
 
     function dropZoneHtml(items, colorMain, colorBg, placeholder, _flexVal, dvColor, zone, col, rowId) {
@@ -923,7 +944,7 @@ function(instance, context) {
       if (!items || !items.length) return base;
       var condName = conducteur ? conducteur.name : null;
       var condLine = '<div class="ph-conduc-line" data-cond-zone="' + zone + '" data-cond-row="' + rowId + '">'
-        + '👤 <span class="' + (condName ? 'ph-conduc-name' : 'ph-conduc-name ph-conduc-none') + '">'
+        + EMOJIS.conducteur + ' <span class="' + (condName ? 'ph-conduc-name' : 'ph-conduc-name ph-conduc-none') + '">'
         + (condName ? escHtml(condName) : '—')
         + '</span>'
         + '<span class="ph-conduc-edit" data-cond-edit-zone="' + zone + '" data-cond-edit-row="' + rowId + '" title="Changer le conducteur">✎</span>'
@@ -1112,13 +1133,19 @@ function(instance, context) {
       return '<div style="width:' + POOL_W + ';min-width:' + POOL_W + ';flex-shrink:0;"></div>';
     }
 
+    var _transportTypeSet = {};
+    (instance.data.atelierTransportTypes || []).forEach(function(t) { _transportTypeSet[t] = true; });
+    function isTransportAtelierType(t) { return !!_transportTypeSet[t]; }
+
     // ---- POOLS ATELIER ----
     function buildAtelierPools() {
-      var pc = s.pools.chantiers;
+      var types = (instance.data.atelierTypes || []).filter(function(t) { return !isTransportAtelierType(t); });
+      var cards = types.map(function(t) {
+        var names = s.pools.chantiers[t] || [];
+        return poolCardHtml(t, C.atelier.main, C.atelier.bg, names, 'chantier', C.atelier.main, C.atelier.bg, t);
+      }).join('');
       return '<div style="width:' + POOL_W + ';min-width:' + POOL_W + ';flex-shrink:0;display:flex;flex-direction:column;gap:8px;position:sticky;top:0;align-self:flex-start;max-height:calc(100vh - 60px);overflow-y:auto;">'
-        + poolCardHtml(LABELS.pools.k2,          C.k2.main,       C.k2.bg,       pc.k2,          'chantier', C.k2.main,       C.k2.bg,       'k2')
-        + poolCardHtml(LABELS.pools.finitionK2,   C.finition.main, C.finition.bg, pc.finitionK2,  'chantier', C.finition.main, C.finition.bg, 'finitionK2')
-        + poolCardHtml(LABELS.pools.fabrication,  C.atelier.main,  C.atelier.bg,  pc.fabrication, 'chantier', C.atelier.main,  C.atelier.bg,  'fabrication')
+        + cards
         + '</div>';
     }
 
@@ -1128,8 +1155,13 @@ function(instance, context) {
     var d = s.date;
     var dateStr = days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
 
+    var transportAtelierTypes = (instance.data.atelierTypes || []).filter(isTransportAtelierType);
+    var transportAtelierCards = transportAtelierTypes.map(function(t) {
+      var names = s.pools.chantiers[t] || [];
+      return poolCardHtml(t, C.transport.main, C.transport.bg, names, 'chantier', C.transport.main, C.transport.bg, t);
+    }).join('');
     var transportPool = '<div style="width:' + POOL_W + ';min-width:' + POOL_W + ';flex-shrink:0;">'
-      + poolCardHtml(LABELS.pools.transport, C.transport.main, C.transport.bg, s.pools.chantiers.transport, 'chantier', C.transport.main, C.transport.bg, 'transport')
+      + (transportAtelierCards || '')
       + '</div>';
 
     cnt.innerHTML = '<div class="' + ID + '"><div class="ph-wrap">'
@@ -1615,6 +1647,15 @@ function(instance, context) {
     var drag = instance.data.dragData;
     if (!drag) return;
 
+    // Autoscroll pendant le drag (fix Windows/Chrome où la molette est bloquée)
+    var wrap = cnt.querySelector('.ph-wrap');
+    if (wrap) {
+      var wRect = wrap.getBoundingClientRect();
+      var ZONE = 100, SPEED = 14;
+      if (e.clientY < wRect.top + ZONE)    wrap.scrollTop -= SPEED;
+      else if (e.clientY > wRect.bottom - ZONE) wrap.scrollTop += SPEED;
+    }
+
     var hoverTag = e.target.closest('.ph-tag[data-dz]');
     if (hoverTag && !hoverTag.classList.contains('dragging')
         && hoverTag.dataset.dz === drag.zone
@@ -1774,15 +1815,20 @@ function(instance, context) {
     }
 
     // Place dans la cible
-    addToTarget(st, drag, targetZone, targetCol, targetRow);
+    var addResult = addToTarget(st, drag, targetZone, targetCol, targetRow);
 
-    // Auto-poste atelier selon le pool source
-    if (targetZone === 'atelier' && targetCol === 'chantiers' && drag.poolKey) {
-      var POOL_TO_POSTE = { k2: 'K2', finitionK2: 'Finition K2', fabrication: 'Fabrication' };
-      var autoPoste = POOL_TO_POSTE[drag.poolKey];
+    // Auto-poste atelier selon le pool source (écrase toujours)
+    if (targetZone === 'atelier' && targetCol === 'chantiers') {
+      var poolSource = drag.poolKey || drag.origPool;
+      var POOL_TO_POSTE = {
+        '⚙️ K2':           'K2',
+        '✅ Finitions K2':  'Finition K2',
+        '🏭 Fabrication':  'Fabrication'
+      };
+      var autoPoste = poolSource && POOL_TO_POSTE[poolSource];
       if (autoPoste) {
         var atelRow = getRow(st, 'atelier', targetRow);
-        if (atelRow && !atelRow.poste) atelRow.poste = autoPoste;
+        if (atelRow) atelRow.poste = autoPoste;
       }
     }
 
@@ -1813,7 +1859,10 @@ function(instance, context) {
     instance.publishState('drop_zone',   zoneLabel(targetZone));
     instance.publishState('row_id_source', drag.isDuplicate ? '' : (srcRowForId ? (srcRowForId.rowId || '') : srcAbsRowId));
     instance.publishState('row_id_drop',   tgtRowForId ? (tgtRowForId.rowId || '') : tgtAbsRowId);
+    var dropAtelierComment = addResult && addResult.atelierComment;
+    if (dropAtelierComment) instance.publishState('commentaire', dropAtelierComment);
     instance.triggerEvent('tag_moved');
+    if (dropAtelierComment) instance.triggerEvent('add_commentaire');
   });
 
   // ---- Show Loader ----
@@ -2293,7 +2342,8 @@ function(instance, context) {
     instance.publishState('tag_contact',   null);
     instance.publishState('tag_vehicule',  null);
     instance.publishState('tag_chantier',  null);
-    instance.publishState('tag_conducteur', null);
+    instance.publishState('tag_conducteur',     null);
+    instance.publishState('tag_conducteur_sst', null);
     instance.publishState('source_zone',   null);
     instance.publishState('drop_zone',     null);
     instance.publishState('row_id_source', '');
@@ -2381,8 +2431,12 @@ function(instance, context) {
     if (targetCol === 'chantiers') {
       if (!row.chantiers) row.chantiers = [];
       var exists = row.chantiers.some(function(c) { return c.name === drag.name; });
-      if (!exists) row.chantiers.push({ name: drag.name, type: 'chantier', origPool: drag.poolKey || drag.origPool || null });
-      if (drag.poolKey) removeFromPool(st, drag);
+      if (!exists) {
+        row.chantiers.push({ name: drag.name, type: 'chantier', origPool: drag.poolKey || drag.origPool || null });
+        var atelierComment = (targetZone === 'transport' || targetZone === 'atelier')
+          && instance.data.atelierChantierCommentMap && instance.data.atelierChantierCommentMap[drag.name];
+        if (atelierComment) { row.commentaire = atelierComment; return { atelierComment: atelierComment }; }
+      }
 
     } else if (targetCol === 'equipier') {
       var item = { name: drag.name, type: drag.type };
@@ -2577,7 +2631,7 @@ function(instance, context) {
   instance.data.chantierDebutMap = {}; // { nomChantier: Date } — chantiers qui démarrent ce jour
   instance.data.vehiculeOrdreMap = {};
   instance.data.equipierSearch = '';
-  var ALL_POOL_KEYS = ['equipiers', 'soustraitants', 'vehicules', 'chantier', 'transport', 'k2', 'finitionK2', 'fabrication', 'bureau_eq'];
+  var ALL_POOL_KEYS = ['equipiers', 'soustraitants', 'vehicules', 'chantier', 'bureau_eq'].concat(instance.data.atelierTypes || []);
   instance.data.collapsedPools = (function() {
     var map = {};
     ALL_POOL_KEYS.forEach(function(k) { map[k] = true; });

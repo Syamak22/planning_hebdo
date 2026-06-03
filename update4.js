@@ -20,8 +20,12 @@ function(instance, properties, context) {
   var fieldPlaPoste    = properties.field_pla_poste_atelier;
   var fieldChDateDebut = properties.field_ch_date_debut;
   var fieldPlaRowId      = properties.field_pla_row_id;
-  var fieldPlaConducteur = properties.field_pla_conducteur;
-  var fieldVehLoc        = properties.field_veh_loc;
+  var fieldPlaConducteur    = properties.field_pla_conducteur;
+  var fieldPlaConducteurSst = properties.field_pla_conducteur_sst;
+  var fieldVehLoc           = properties.field_veh_loc;
+  var fieldPlaAtelierType   = properties.field_pla_atelier_type;
+  var fieldPlaAtelierCha    = properties.field_pla_atelier_cha;
+  var fieldPlaAtelierCom    = properties.field_pla_atelier_commentaire;
   instance.data.isDisplay = !!properties.is_display;
   instance.data.isOff     = !!properties.jour_off;
 
@@ -86,11 +90,10 @@ function(instance, properties, context) {
     var sttItems     = readList(props.table_stt);
     var vehItems     = readList(props.table_veh);
     var vehIndispo   = readList(props.liste_veh_indispo);
-    var chJour       = readList(props.table_ch_jour);
-    var chTrans      = readList(props.table_ch_transport);
-    var chK2         = readList(props.table_ch_k2);
-    var chFinK2      = readList(props.table_ch_fin_k2);
-    var chFab        = readList(props.table_ch_fab);
+    var chJour                    = readList(props.table_ch_jour);
+    var atelierPlaItems           = readList(props.table_pla_atelier);
+    var atelierTypeItems          = readList(props.table_type_atelier);
+    var atelierTransportTypeItems = readList(props.table_type_atelier_transport);
     var chAll        = readList(props.table_ch);
     var absenceItems    = readList(props.table_absence);
     var posteItems      = readList(props.table_poste_atelier);
@@ -115,10 +118,18 @@ function(instance, properties, context) {
       var d = c.get(fieldChDateDebut); return d ? d.getTime() : '';
     }).join(',') : '');
     hash += '|chJ:' + chJour.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
-    hash += '|chT:' + chTrans.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
-    hash += '|chK2:' + chK2.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
-    hash += '|chFK2:' + chFinK2.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
-    hash += '|chFab:' + chFab.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
+    hash += '|atelierTrans:' + atelierTransportTypeItems.map(function(t) {
+      return t && typeof t.get === 'function' ? (t.get('display') || '') : '';
+    }).join(',');
+    hash += '|atelierPla:' + atelierPlaItems.map(function(a) {
+      if (!a || typeof a.get !== 'function') return '';
+      var typeOS  = fieldPlaAtelierType ? a.get(fieldPlaAtelierType) : null;
+      var typeStr = typeOS && typeof typeOS.get === 'function' ? (typeOS.get('display') || '') : '';
+      var chaObj  = fieldPlaAtelierCha ? a.get(fieldPlaAtelierCha) : null;
+      var chaName = chaObj && typeof chaObj.get === 'function' ? (getField(chaObj, fieldChName) || '') : '';
+      var com     = fieldPlaAtelierCom ? (a.get(fieldPlaAtelierCom) || '') : '';
+      return typeStr + ':' + chaName + ':' + com;
+    }).join(',');
     hash += '|chAll:' + chAll.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
     hash += '|pla:' + planItems.map(function(p) {
       if (!p || typeof p.get !== 'function') return '';
@@ -138,10 +149,12 @@ function(instance, properties, context) {
       var posteStr  = (posteOS && typeof posteOS.get === 'function') ? (posteOS.get('display') || '') : '';
       var motifOS    = fieldPlaMotif ? p.get(fieldPlaMotif) : null;
       var motifStr   = (motifOS && typeof motifOS.get === 'function') ? (motifOS.get('display') || '') : '';
-      var condObjPla = fieldPlaConducteur ? p.get(fieldPlaConducteur) : null;
-      var condIdPla  = (condObjPla && typeof condObjPla.get === 'function') ? (condObjPla.get('_id') || '') : '';
-      var comPla     = fieldPlaCom ? (p.get(fieldPlaCom) || '') : '';
-      return id + ':' + typeStr + ':' + eqLen + ':' + sttLen2 + ':' + chaLen + ':' + vehId + ':' + posteStr + ':' + motifStr + ':' + condIdPla + ':' + comPla;
+      var condObjPla    = fieldPlaConducteur ? p.get(fieldPlaConducteur) : null;
+      var condIdPla     = (condObjPla && typeof condObjPla.get === 'function') ? (condObjPla.get('_id') || '') : '';
+      var condObjSstPla = (!condObjPla && fieldPlaConducteurSst) ? p.get(fieldPlaConducteurSst) : null;
+      var condIdSstPla  = (condObjSstPla && typeof condObjSstPla.get === 'function') ? (condObjSstPla.get('_id') || '') : '';
+      var comPla        = fieldPlaCom ? (p.get(fieldPlaCom) || '') : '';
+      return id + ':' + typeStr + ':' + eqLen + ':' + sttLen2 + ':' + chaLen + ':' + vehId + ':' + posteStr + ':' + motifStr + ':' + condIdPla + ':' + condIdSstPla + ':' + comPla;
     }).join(',');
 
     if (instance.data.lastMasterHash === hash) return;
@@ -236,13 +249,45 @@ function(instance, properties, context) {
     }
     instance.data.defaultConducteurMap = defaultConducteurMap;
 
-    var allChJour  = chJour.map(function(c)  { return getField(c, fieldChName); }).filter(Boolean);
-    var allChTrans = chTrans.map(function(c) { return getField(c, fieldChName); }).filter(Boolean);
-    var allChK2    = chK2.map(function(c)    { return getField(c, fieldChName); }).filter(Boolean);
-    var allChFinK2 = chFinK2.map(function(c) { return getField(c, fieldChName); }).filter(Boolean);
-    var allChFab   = chFab.map(function(c)   { return getField(c, fieldChName); }).filter(Boolean);
+    var allChJour = chJour.map(function(c) { return getField(c, fieldChName); }).filter(Boolean);
+
+    // Types atelier dynamiques depuis l'option set
+    var atelierTypes = atelierTypeItems.map(function(t) {
+      return t && typeof t.get === 'function' ? (t.get('display') || '') : '';
+    }).filter(Boolean);
+
+    var atelierTransportTypes = atelierTransportTypeItems.map(function(t) {
+      return t && typeof t.get === 'function' ? (t.get('display') || '') : '';
+    }).filter(Boolean);
+    instance.data.atelierTransportTypes = atelierTransportTypes;
+
+    // Maps atelier : typeDisplay → [chantierNames] et chantierName → commentaire
+    var atelierTypeChantierMap   = {};
+    var atelierChantierCommentMap = {};
+    atelierTypes.forEach(function(t) { atelierTypeChantierMap[t] = []; });
 
     var chantierDebutMap = {};
+    atelierPlaItems.forEach(function(a) {
+      if (!a || typeof a.get !== 'function') return;
+      var typeOS  = fieldPlaAtelierType ? a.get(fieldPlaAtelierType) : null;
+      var typeStr = typeOS && typeof typeOS.get === 'function' ? (typeOS.get('display') || '') : '';
+      var chaObj  = fieldPlaAtelierCha ? a.get(fieldPlaAtelierCha) : null;
+      var chaName = chaObj && typeof chaObj.get === 'function' ? getField(chaObj, fieldChName) : null;
+      if (!typeStr || !chaName) return;
+      if (!atelierTypeChantierMap[typeStr]) atelierTypeChantierMap[typeStr] = [];
+      if (atelierTypeChantierMap[typeStr].indexOf(chaName) === -1) atelierTypeChantierMap[typeStr].push(chaName);
+      resourceMap[chaName] = { obj: chaObj, type: 'chantier' };
+      if (fieldChDateDebut) {
+        try { var d = chaObj.get(fieldChDateDebut); if (d) chantierDebutMap[chaName] = d; } catch(e) {}
+      }
+      var com = fieldPlaAtelierCom ? (a.get(fieldPlaAtelierCom) || '') : '';
+      if (com) atelierChantierCommentMap[chaName] = com;
+    });
+
+    instance.data.atelierTypes             = atelierTypes;
+    instance.data.atelierTypeChantierMap   = atelierTypeChantierMap;
+    instance.data.atelierChantierCommentMap = atelierChantierCommentMap;
+
     var chantierList = chAll.map(function(c) {
       var name = getField(c, fieldChName);
       if (name) {
@@ -256,7 +301,13 @@ function(instance, properties, context) {
     }).filter(Boolean);
 
     if (!chantierList.length) {
-      chantierList = [].concat(allChJour, allChTrans, allChK2, allChFinK2, allChFab)
+      var atelierAllChantiers = [];
+      atelierTypes.forEach(function(t) {
+        (atelierTypeChantierMap[t] || []).forEach(function(n) {
+          if (atelierAllChantiers.indexOf(n) === -1) atelierAllChantiers.push(n);
+        });
+      });
+      chantierList = allChJour.concat(atelierAllChantiers)
         .filter(function(n, i, arr) { return arr.indexOf(n) === i; });
     }
 
@@ -327,8 +378,18 @@ function(instance, properties, context) {
       if (condObjRow && typeof condObjRow.get === 'function') {
         var cRowName = getField(condObjRow, fieldUserName);
         if (cRowName) {
-          conducteur = { name: cRowName, obj: condObjRow };
+          conducteur = { name: cRowName, obj: condObjRow, type: 'equipier' };
           if (!resourceMap[cRowName]) resourceMap[cRowName] = { obj: condObjRow, type: 'user' };
+        }
+      }
+      if (!conducteur && fieldPlaConducteurSst) {
+        var condSstRow = planObj.get(fieldPlaConducteurSst);
+        if (condSstRow && typeof condSstRow.get === 'function') {
+          var cSstName = getField(condSstRow, fieldSttName);
+          if (cSstName) {
+            conducteur = { name: cSstName, obj: condSstRow, type: 'soustraitant' };
+            if (!resourceMap[cSstName]) resourceMap[cSstName] = { obj: condSstRow, type: 'soustraitant' };
+          }
         }
       }
       if (!conducteur && vehName && defaultConducteurMap[vehName]) {
@@ -359,9 +420,16 @@ function(instance, properties, context) {
         });
 
       } else if (typeNorm === 'transport') {
+        var chantiersForTransport = chantiers.map(function(c) {
+          var derivedPool = null;
+          atelierTransportTypes.forEach(function(t) {
+            if (!derivedPool && (atelierTypeChantierMap[t] || []).indexOf(c.name) !== -1) derivedPool = t;
+          });
+          return { name: c.name, type: c.type, origPool: derivedPool };
+        });
         rows.transport.push({
           rowId:       rowId,
-          chantiers:   chantiers,
+          chantiers:   chantiersForTransport,
           equipiers:   equipiers,
           vehicule:    vehName ? { name: vehName, type: 'vehicule' } : null,
           conducteur:  conducteur,
@@ -371,10 +439,15 @@ function(instance, properties, context) {
       } else if (typeNorm === 'atelier') {
         var posteOS  = planObj.get(fieldPlaPoste);
         var posteStr = getDisplay(posteOS) || (postes[0] || 'K2');
+        var POSTE_TO_POOL = { 'K2': '⚙️ K2', 'Finition K2': '✅ Finitions K2', 'Fabrication': '🏭 Fabrication' };
+        var postePool = POSTE_TO_POOL[posteStr] || null;
+        var chantiersWithPool = chantiers.map(function(c) {
+          return { name: c.name, type: c.type, origPool: postePool };
+        });
         rows.atelier.push({
           rowId:       rowId,
           poste:       posteStr,
-          chantiers:   chantiers,
+          chantiers:   chantiersWithPool,
           equipiers:   equipiers,
           commentaire: commentaire,
         });
@@ -412,11 +485,24 @@ function(instance, properties, context) {
       });
     }
 
-    st.pools.chantiers.chantier    = allChJour.filter(function(n)  { return notInRows(n, rows.chantier);  });
-    st.pools.chantiers.transport   = allChTrans.filter(function(n) { return notInRows(n, rows.transport); });
-    st.pools.chantiers.k2          = allChK2.filter(function(n)    { return notInRows(n, rows.atelier);   });
-    st.pools.chantiers.finitionK2  = allChFinK2.filter(function(n) { return notInRows(n, rows.atelier);   });
-    st.pools.chantiers.fabrication = allChFab.filter(function(n)   { return notInRows(n, rows.atelier);   });
+    // Pool-aware : un chantier ne disparaît d'un pool que s'il a été posé DEPUIS ce pool
+    function notInRowsForPool(name, poolKey, zoneRows) {
+      return !zoneRows.some(function(r) {
+        return (r.chantiers || []).some(function(c) { return c.name === name && c.origPool === poolKey; });
+      });
+    }
+
+    st.pools.chantiers.chantier = allChJour.filter(function(n) { return notInRows(n, rows.chantier); });
+
+    var atelierTransportTypeSet = {};
+    atelierTransportTypes.forEach(function(t) { atelierTransportTypeSet[t] = true; });
+
+    atelierTypes.forEach(function(t) {
+      var relevantRows = atelierTransportTypeSet[t] ? rows.transport : rows.atelier;
+      st.pools.chantiers[t] = (atelierTypeChantierMap[t] || []).filter(function(n) {
+        return notInRowsForPool(n, t, relevantRows);
+      });
+    });
 
     // Conserver les lignes "locales" (non encore sauvegardées en DB)
     // Une ligne locale = rowId non présent dans aucun planItem
