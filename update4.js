@@ -4,6 +4,7 @@ function(instance, properties, context) {
   // PROPERTIES — noms de champs (statiques, fixés dans l'éditeur Bubble)
   // ============================================================
   var fieldChName      = properties.field_ch_name;
+  var fieldChNameTV    = properties.field_ch_name_tv;
   var fieldUserName    = properties.field_user_name;
   var fieldSttName     = properties.field_stt_name;
   var fieldVehName     = properties.field_veh_name;
@@ -22,10 +23,14 @@ function(instance, properties, context) {
   var fieldPlaRowId      = properties.field_pla_row_id;
   var fieldPlaConducteur    = properties.field_pla_conducteur;
   var fieldPlaConducteurSst = properties.field_pla_conducteur_sst;
+  var fieldChParent         = properties.field_ch_parent_chantier;
   var fieldVehLoc           = properties.field_veh_loc;
+  var fieldVehIsArchived    = properties.field_veh_is_archived;
+  var fieldVehNumInterne    = properties.field_num_interne;
   var fieldPlaAtelierType   = properties.field_pla_atelier_type;
   var fieldPlaAtelierCha    = properties.field_pla_atelier_cha;
   var fieldPlaAtelierCom    = properties.field_pla_atelier_commentaire;
+  var posteTypeMappingRaw   = properties.poste_type_mapping;
   instance.data.isDisplay = !!properties.is_display;
   instance.data.isOff     = !!properties.jour_off;
 
@@ -130,7 +135,15 @@ function(instance, properties, context) {
       var com     = fieldPlaAtelierCom ? (a.get(fieldPlaAtelierCom) || '') : '';
       return typeStr + ':' + chaName + ':' + com;
     }).join(',');
-    hash += '|chAll:' + chAll.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
+    hash += '|chAll:' + chAll.map(function(c) {
+      var n = getField(c, fieldChName) || '';
+      var tvN = fieldChNameTV ? (getField(c, fieldChNameTV) || '') : '';
+      var pId = '';
+      if (fieldChParent) {
+        try { var pObj = c.get(fieldChParent); pId = (pObj && typeof pObj.get === 'function') ? (pObj.get('_id') || '') : ''; } catch(e) {}
+      }
+      return n + ':' + tvN + ':' + pId;
+    }).join(',');
     hash += '|pla:' + planItems.map(function(p) {
       if (!p || typeof p.get !== 'function') return '';
       var id      = p.get('_id') || '';
@@ -157,6 +170,8 @@ function(instance, properties, context) {
       return id + ':' + typeStr + ':' + eqLen + ':' + sttLen2 + ':' + chaLen + ':' + vehId + ':' + posteStr + ':' + motifStr + ':' + condIdPla + ':' + condIdSstPla + ':' + comPla;
     }).join(',');
 
+    // Résultats de recherche chantier — traités séparément du hash principal
+    // pour ne pas déclencher un re-render complet du planning
     if (instance.data.lastMasterHash === hash) return;
 
     // ----------------------------------------------------------
@@ -210,8 +225,10 @@ function(instance, properties, context) {
     });
 
     var allVehicules = [];
-    var vehiculeOrdreMap = {};
-    var vehiculeLocMap = {};
+    var vehiculeOrdreMap      = {};
+    var vehiculeLocMap        = {};
+    var vehiculeNumInterneMap = {};
+    var archivedVehicules     = {};
     vehItems.forEach(function(v) {
       var name = getField(v, fieldVehName);
       if (!name) return;
@@ -221,13 +238,27 @@ function(instance, properties, context) {
         var ord = v.get(fieldOrdre);
         if (ord !== null && ord !== undefined) vehiculeOrdreMap[name] = Number(ord);
       }
+      if (fieldVehNumInterne) {
+        var num = v.get(fieldVehNumInterne);
+        if (num !== null && num !== undefined) vehiculeNumInterneMap[name] = String(num);
+      }
       if (fieldVehLoc) {
         var isLoc = v.get(fieldVehLoc);
         if (isLoc) vehiculeLocMap[name] = true;
       }
+      if (fieldVehIsArchived) {
+        var isArchived = v.get(fieldVehIsArchived);
+        if (isArchived) archivedVehicules[name] = true;
+      }
     });
-    instance.data.vehiculeOrdreMap = vehiculeOrdreMap;
-    instance.data.vehiculeLocMap   = vehiculeLocMap;
+    var prevOrdreMap = instance.data.vehiculeOrdreMap || {};
+    Object.keys(prevOrdreMap).forEach(function(n) {
+      if (vehiculeOrdreMap[n] === undefined) vehiculeOrdreMap[n] = prevOrdreMap[n];
+    });
+    instance.data.vehiculeOrdreMap      = vehiculeOrdreMap;
+    instance.data.vehiculeLocMap        = vehiculeLocMap;
+    instance.data.vehiculeNumInterneMap = vehiculeNumInterneMap;
+    instance.data.archivedVehicules     = archivedVehicules;
 
     // MAP véhicule → conducteur par défaut (via field_conduc1 sur l'objet véhicule)
     var defaultConducteurMap = {};
@@ -261,7 +292,24 @@ function(instance, properties, context) {
     }).filter(Boolean);
     instance.data.atelierTransportTypes = atelierTransportTypes;
 
-    // Maps atelier : typeDisplay → [chantierNames] et chantierName → commentaire
+    var POSTE_TO_POOL = {};
+    if (posteTypeMappingRaw) {
+      posteTypeMappingRaw.split(',').forEach(function(pair) {
+        var parts = pair.split('/');
+        if (parts.length === 2 && parts[0].trim() && parts[1].trim()) {
+          POSTE_TO_POOL[parts[0].trim()] = parts[1].trim();
+        }
+      });
+    }
+    if (!Object.keys(POSTE_TO_POOL).length) {
+      POSTE_TO_POOL = { 'K2': '⚙️ K2', 'Finition K2': '✅ Finitions K2', 'Fabrication': '🏭 Fabrication' };
+    }
+    var POOL_TO_POSTE = {};
+    Object.keys(POSTE_TO_POOL).forEach(function(k) { POOL_TO_POSTE[POSTE_TO_POOL[k]] = k; });
+    instance.data.poolToTypeStr = POOL_TO_POSTE;
+    instance.data.posteToPool   = POSTE_TO_POOL;
+
+    // Maps atelier : typeDisplay → [chantierNames] et typeDisplay → chantierName → commentaire
     var atelierTypeChantierMap   = {};
     var atelierChantierCommentMap = {};
     atelierTypes.forEach(function(t) { atelierTypeChantierMap[t] = []; });
@@ -281,13 +329,17 @@ function(instance, properties, context) {
         try { var d = chaObj.get(fieldChDateDebut); if (d) chantierDebutMap[chaName] = d; } catch(e) {}
       }
       var com = fieldPlaAtelierCom ? (a.get(fieldPlaAtelierCom) || '') : '';
-      if (com) atelierChantierCommentMap[chaName] = com;
+      if (com) {
+        if (!atelierChantierCommentMap[typeStr]) atelierChantierCommentMap[typeStr] = {};
+        atelierChantierCommentMap[typeStr][chaName] = com;
+      }
     });
 
     instance.data.atelierTypes             = atelierTypes;
     instance.data.atelierTypeChantierMap   = atelierTypeChantierMap;
     instance.data.atelierChantierCommentMap = atelierChantierCommentMap;
 
+    var chantierTvNameMap = {};
     var chantierList = chAll.map(function(c) {
       var name = getField(c, fieldChName);
       if (name) {
@@ -296,9 +348,14 @@ function(instance, properties, context) {
           var d = c.get(fieldChDateDebut);
           if (d) chantierDebutMap[name] = d;
         }
+        if (fieldChNameTV) {
+          var tvName = getField(c, fieldChNameTV);
+          if (tvName) chantierTvNameMap[name] = tvName;
+        }
       }
       return name;
     }).filter(Boolean);
+    instance.data.chantierTvNameMap = chantierTvNameMap;
 
     if (!chantierList.length) {
       var atelierAllChantiers = [];
@@ -312,6 +369,8 @@ function(instance, properties, context) {
     }
 
     instance.data.chantierList     = chantierList;
+    instance.data.chSearchResults  = chantierList;
+    if (instance.data.pickerRenderList) instance.data.pickerRenderList();
     instance.data.resourceMap      = resourceMap;
     instance.data.indispoVehicules = indispoNames;
     instance.data.chantierDebutMap = chantierDebutMap;
@@ -392,11 +451,12 @@ function(instance, properties, context) {
           }
         }
       }
-      if (!conducteur && vehName && defaultConducteurMap[vehName]) {
+      var typeNorm = typeStr.toLowerCase();
+
+      // Fallback conducteur par défaut du véhicule (field_conduc1) — seulement pour chantier/transport
+      if (!conducteur && vehName && defaultConducteurMap[vehName] && (typeNorm === 'chantier' || typeNorm === 'transport')) {
         conducteur = defaultConducteurMap[vehName];
       }
-
-      var typeNorm = typeStr.toLowerCase();
 
       if (typeNorm === 'absence') {
         var motifOS  = planObj.get(fieldPlaMotif);
@@ -439,7 +499,6 @@ function(instance, properties, context) {
       } else if (typeNorm === 'atelier') {
         var posteOS  = planObj.get(fieldPlaPoste);
         var posteStr = getDisplay(posteOS) || (postes[0] || 'K2');
-        var POSTE_TO_POOL = { 'K2': '⚙️ K2', 'Finition K2': '✅ Finitions K2', 'Fabrication': '🏭 Fabrication' };
         var postePool = POSTE_TO_POOL[posteStr] || null;
         var chantiersWithPool = chantiers.map(function(c) {
           return { name: c.name, type: c.type, origPool: postePool };
@@ -477,7 +536,7 @@ function(instance, properties, context) {
     // ----------------------------------------------------------
     st.pools.equipiers     = allEquipiers.filter(function(n) { return !usedEquipiers[n]; });
     st.pools.soustraitants = allStt.filter(function(n)       { return !usedStt[n]; });
-    st.pools.vehicules     = allVehicules.filter(function(n) { return !usedVehicules[n]; });
+    st.pools.vehicules     = allVehicules.filter(function(n) { return !usedVehicules[n] && !archivedVehicules[n]; });
 
     function notInRows(name, zoneRows) {
       return !zoneRows.some(function(r) {
@@ -505,20 +564,23 @@ function(instance, properties, context) {
     });
 
     // Conserver les lignes "locales" (non encore sauvegardées en DB)
-    // Une ligne locale = rowId non présent dans aucun planItem
+    // Une ligne locale = rowId jamais apparu dans la DB (créé dans ce navigateur)
+    // Si un rowId était en DB au render précédent mais n'y est plus → supprimé → ne pas réinjecter
     var dbRowIds = {};
     planItems.forEach(function(p) {
       if (!p || typeof p.get !== 'function') return;
       var rid = fieldPlaRowId ? p.get(fieldPlaRowId) : null;
       if (rid) dbRowIds[rid] = true;
     });
+    var prevDbRowIds  = instance.data.lastDbRowIds || {};
     var prevRenderDate = instance.data.lastRenderDate;
     var dateUnchanged = prevRenderDate && st.date && prevRenderDate.getTime() === st.date.getTime();
     if (dateUnchanged) {
       ['chantier', 'transport', 'atelier', 'bureau'].forEach(function(zone) {
         var prevRows = st.rows[zone] || [];
         prevRows.forEach(function(r) {
-          if (r.rowId && !dbRowIds[r.rowId]) {
+          var wasEverInDb = prevDbRowIds[r.rowId];
+          if (r.rowId && !dbRowIds[r.rowId] && !wasEverInDb) {
             rows[zone].push(r);
           }
         });
@@ -562,6 +624,23 @@ function(instance, properties, context) {
       instance.data.conducteurToVehiculeNames = condMap;
     }
 
+    // Map enfant → nom TV du parent — construit depuis resourceMap (objets de table_pla)
+    var chantierParentMap = {};
+    if (fieldChParent) {
+      Object.keys(resourceMap).forEach(function(name) {
+        var entry = resourceMap[name];
+        if (!entry || entry.type !== 'chantier') return;
+        var parentObj = null;
+        try { parentObj = entry.obj.get(fieldChParent); } catch(e) {}
+        if (!parentObj || typeof parentObj.get !== 'function') return;
+        var parentName = getField(parentObj, fieldChName);
+        if (!parentName) return;
+        var parentTvName = (fieldChNameTV ? (getField(parentObj, fieldChNameTV) || null) : null) || parentName;
+        chantierParentMap[name] = parentTvName;
+      });
+    }
+    instance.data.chantierParentMap = chantierParentMap;
+
     // ----------------------------------------------------------
     // RENDER + COMMIT HASH
     // Le hash est écrit UNIQUEMENT après un render réussi.
@@ -571,5 +650,6 @@ function(instance, properties, context) {
     if (instance.data.render) instance.data.render();
     instance.data.lastMasterHash  = hash;
     instance.data.lastRenderDate  = st.date;
+    instance.data.lastDbRowIds    = dbRowIds;
   }
 }

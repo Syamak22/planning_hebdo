@@ -166,6 +166,8 @@ function(instance, context) {
     '@keyframes ph-blink-' + instanceId + ' { 0%,100% { opacity:1; } 50% { opacity:0.25; } }',
     '.' + ID + ' .ph-tag-rm { display:inline-flex; align-items:center; justify-content:center; width:12px; height:12px; border-radius:50%; background:rgba(0,0,0,0.12); font-size:9px; line-height:1; cursor:pointer; flex-shrink:0; }',
     '.' + ID + ' .ph-tag-rm:hover { background:rgba(0,0,0,0.28); }',
+    '.' + ID + ' .ph-tag-com { display:inline-flex; align-items:center; font-size:10px; opacity:0.75; flex-shrink:0; cursor:default; }',
+    '#ph-tooltip { position:fixed; background:#1E293B; color:#F8FAFC; font-size:11px; font-weight:400; line-height:1.4; white-space:normal; word-break:normal; width:220px; padding:6px 9px; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.25); pointer-events:none; z-index:99999; display:none; }',
     '.' + ID + ' .ph-drop { min-height:26px; padding:3px 4px; display:flex; flex-wrap:wrap; align-items:center; gap:2px; border-radius:0; margin:0; transition:outline 0.1s,background 0.1s; border-bottom:' + SEP_ROW + '; }',
     '.' + ID + ' .ph-drop.dv-ok  { outline:2px dashed var(--dv-color,#3B82F6); outline-offset:-2px; background:rgba(59,130,246,0.06); }',
     '.' + ID + ' .ph-pool-drop { transition:outline 0.1s,background 0.1s; min-height:60px; }',
@@ -210,6 +212,7 @@ function(instance, context) {
     '.' + ID + ' .ph-copy-zone-btn:hover { opacity:0.75; }',
     '.' + ID + ' .ph-tag.insert-before { border-left:2px solid #3B82F6 !important; margin-left:3px; }',
     '.' + ID + ' .ph-tag.insert-after  { border-right:2px solid #3B82F6 !important; margin-right:3px; }',
+    '.' + ID + ' .ph-drop.ph-dz-active { outline:2px solid #3B82F6; outline-offset:-2px; background:rgba(59,130,246,0.06); }',
     // --- Display mode ---
     '.' + ID + '.ph-display { background:#F1F5F9; }',
     '.' + ID + ' .ph-dv-wrap { padding:20px; display:flex; flex-direction:column; gap:16px; height:100%; overflow-y:auto; box-sizing:border-box; }',
@@ -228,6 +231,8 @@ function(instance, context) {
     '.' + ID + ' .ph-dv-cell-veh { display:flex; flex-wrap:wrap; gap:4px; flex-shrink:0; }',
     '.' + ID + ' .ph-dv-comment { font-size:13px; color:#475569; font-style:italic; padding:4px 10px; background:#F8FAFC; border-radius:4px; border-left:3px solid #CBD5E1; word-break:break-word; overflow-wrap:break-word; }',
     '.' + ID + ' .ph-dv-tag { display:inline-flex; align-items:center; padding:3px 9px; border-radius:5px; font-size:clamp(11px,1.1vw,13px); font-weight:600; white-space:nowrap; border:1px solid transparent; }',
+    '.' + ID + ' .ph-dv-tag-com { flex-direction:column; align-items:flex-start; gap:2px; white-space:normal; }',
+    '.' + ID + ' .ph-dv-tag-sub { font-size:clamp(9px,0.85vw,11px); font-weight:400; opacity:0.75; line-height:1.3; }',
     '.' + ID + ' .ph-dv-poste-group { margin-bottom:4px; }',
     '.' + ID + ' .ph-dv-poste-lbl { font-size:10px; font-weight:700; padding:2px 8px; border-radius:3px; display:inline-block; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px; }',
     '.' + ID + ' .ph-dv-abs-cols { display:flex; flex-wrap:wrap; gap:10px; padding:12px 16px; }',
@@ -243,16 +248,16 @@ function(instance, context) {
     '.' + ID + ' .ph-tv-ch-section-hd { font-size:clamp(12px,1.3vw,15px); font-weight:800; padding:7px 14px; background:#FFF; border-radius:8px 8px 0 0; border-left:4px solid; letter-spacing:0.2px; }',
     '.' + ID + ' .ph-tv-ch-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }',
     '.' + ID + ' .ph-tv-ch-card { background:#FFF; border:1px solid #E2E8F0; border-radius:10px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.06); display:flex; flex-direction:column; }',
-    '.' + ID + ' .ph-tv-ch-card-hd { padding:9px 14px; background:#FFFBEB; border-bottom:1px solid #FDE68A; font-size:clamp(11px,1.1vw,13px); font-weight:700; display:flex; flex-wrap:wrap; gap:4px; min-height:36px; }',
+    '.' + ID + ' .ph-tv-ch-card-hd { padding:9px 14px; background:#FFF; border-bottom:1px solid #E2E8F0; font-size:clamp(11px,1.1vw,13px); font-weight:700; display:flex; flex-wrap:wrap; gap:4px; min-height:36px; }',
     '.' + ID + ' .ph-tv-ch-card-body { display:flex; flex-direction:column; flex:1; }',
     '.' + ID + ' .ph-tv-ch-card-sec { padding:8px 14px; border-bottom:1px solid #F1F5F9; display:flex; align-items:flex-start; gap:8px; }',
     '.' + ID + ' .ph-tv-ch-card-sec:last-child { border-bottom:none; }',
-    '.' + ID + ' .ph-tv-ch-card-sec-veh { background:#F0FDF4; border-bottom:1px solid #BBF7D0; min-height:52px; align-items:center; }',
-    '.' + ID + ' .ph-tv-ch-card-sec-equipe { background:#EFF6FF; border-bottom:1px solid #BFDBFE; }',
+    '.' + ID + ' .ph-tv-ch-card-sec-veh { background:#F0FDF4; border-bottom:1px solid #BBF7D0; min-height:36px; padding:5px 14px; align-items:center; }',
+    '.' + ID + ' .ph-tv-ch-card-sec-equipe { background:#FFF; border-bottom:1px solid #F1F5F9; }',
     '.' + ID + ' .ph-tv-ch-card-sec-comment { background:#F8FAFC; }',
     '.' + ID + ' .ph-tv-ch-card-lbl { font-size:15px; flex-shrink:0; line-height:1.5; }',
     '.' + ID + ' .ph-tv-ch-card-tags { display:flex; flex-wrap:wrap; gap:3px; flex:1; }',
-    '.' + ID + ' .ph-tv-ch-veh-name { font-size:clamp(13px,1.4vw,16px); font-weight:800; color:#059669; letter-spacing:-0.3px; }',
+    '.' + ID + ' .ph-tv-ch-veh-name { font-size:clamp(12px,1.2vw,14px); font-weight:800; color:#059669; letter-spacing:-0.3px; }',
     '.' + ID + ' .ph-tv-ch-card-comment { font-size:11px; color:#64748B; font-style:italic; word-break:break-word; flex:1; }',
     '.' + ID + ' .ph-tv-empty { color:#94A3B8; font-style:italic; font-size:13px; padding:12px 16px; background:#FFF; border-radius:8px; border:1px solid #E2E8F0; }',
     // --- TV view : compact bottom zones ---
@@ -301,9 +306,9 @@ function(instance, context) {
     '.ph-cal-today-btn { background:none; border:1px solid #E2E8F0; color:#475569; font-size:11px; font-weight:600; cursor:pointer; border-radius:5px; padding:4px 14px; transition:background 0.15s; }',
     '.ph-cal-today-btn:hover { background:#F1F5F9; }',
     // --- Popover confirmation ---
-    '.ph-copy-popover { position:fixed; z-index:10001; background:#FFF; border:1px solid #E2E8F0; border-radius:5px; padding:16px; width:260px; }',
-    '.ph-copy-popover-title { font-size:13px; font-weight:700; color:#1E293B; margin-bottom:6px; }',
-    '.ph-copy-popover-body { font-size:12px; color:#475569; margin-bottom:14px; line-height:1.5; }',
+    '.ph-copy-popover { position:fixed; z-index:10001; background:#FFF; border:1px solid #E2E8F0; border-radius:5px; padding:10px 12px; width:220px; box-shadow:0 4px 12px rgba(0,0,0,0.1); }',
+    '.ph-copy-popover-title { font-size:12px; font-weight:700; color:#1E293B; margin-bottom:4px; }',
+    '.ph-copy-popover-body { font-size:11px; color:#475569; margin-bottom:10px; line-height:1.5; }',
     '.ph-copy-popover-btns { display:flex; gap:8px; justify-content:flex-end; }',
     '.ph-copy-popover-ok { padding:6px 14px; border-radius:5px; background:#1E293B; color:#FFF; border:none; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.15s; }',
     '.ph-copy-popover-ok:hover { background:#0F172A; }',
@@ -372,7 +377,7 @@ function(instance, context) {
     if (picker && picker.parentNode) picker.parentNode.removeChild(picker);
     instance.data.activePicker = null;
     if (instance.data.pickerCleanup) {
-      instance.data.pickerCleanup();
+      instance.data.pickerCleanup(!!clearState);
       instance.data.pickerCleanup = null;
     }
     if (clearState) instance.data.openPickerState = null;
@@ -640,6 +645,7 @@ function(instance, context) {
 
   function showChantierPicker(dzEl) {
     closeChantierPicker();
+    dzEl.classList.add('ph-dz-active');
     var zone  = dzEl.dataset.dzZone;
     var rowId = dzEl.dataset.dzRow;
     var st    = instance.data.state;
@@ -650,7 +656,6 @@ function(instance, context) {
     var row = getRow(st, zone, rowId);
     if (!row) return;
 
-    var allChantiers = instance.data.chantierList || [];
     var added = (row.chantiers || []).map(function(c) { return c.name; });
 
     var picker = document.createElement('div');
@@ -665,15 +670,17 @@ function(instance, context) {
     var searchEl = picker.querySelector('.ph-cp-search');
     var listEl   = picker.querySelector('.ph-cp-list');
 
-    function renderList(filter) {
-      var filtered = allChantiers.filter(function(name) {
-        return !filter || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1;
-      });
-      if (!filtered.length) {
+    function renderList() {
+      var filter     = (searchEl.value || '').trim().toLowerCase();
+      var allResults = instance.data.chSearchResults || [];
+      var results    = filter.length
+        ? allResults.filter(function(n) { return n.toLowerCase().indexOf(filter) !== -1; })
+        : allResults;
+      if (!results.length) {
         listEl.innerHTML = '<div style="padding:12px;font-size:11px;color:#94A3B8;text-align:center;">Aucun résultat</div>';
         return;
       }
-      listEl.innerHTML = filtered.map(function(name) {
+      listEl.innerHTML = results.map(function(name) {
         var isAdded = added.indexOf(name) !== -1;
         return '<div class="ph-cp-item" data-cp-name="' + encodeURIComponent(name) + '" data-cp-added="' + isAdded + '" style="padding:10px 16px;font-size:12px;cursor:' + (isAdded ? 'default' : 'pointer') + ';color:' + (isAdded ? '#94A3B8' : '#1E293B') + ';display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #F8FAFC;">'
           + '<span>' + name + '</span>'
@@ -682,14 +689,35 @@ function(instance, context) {
       }).join('');
     }
 
+    // Exposer renderList pour que update4.js puisse rafraîchir le picker quand les résultats arrivent
+    instance.data.pickerRenderList = renderList;
+
     document.body.appendChild(picker);
     instance.data.activePicker = picker;
-    renderList('');
+    renderList();
     positionPicker(picker, dzEl);
     searchEl.focus();
 
-    searchEl.addEventListener('input', function() { renderList(searchEl.value); });
+    // Restaurer la saisie précédente si le picker a été recréé suite à un re-render
+    if (instance.data.pickerSearchValue) {
+      searchEl.value = instance.data.pickerSearchValue;
+    }
+    renderList();
+
+    searchEl.addEventListener('input', function() {
+      instance.data.pickerSearchValue = searchEl.value;
+      renderList();
+    });
     searchEl.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') closeChantierPicker(true); });
+
+    listEl.addEventListener('mouseover', function(e) {
+      var item = e.target.closest('[data-cp-name]');
+      if (item && item.dataset.cpAdded !== 'true') item.style.background = '#F1F5F9';
+    });
+    listEl.addEventListener('mouseout', function(e) {
+      var item = e.target.closest('[data-cp-name]');
+      if (item) item.style.background = '';
+    });
 
     listEl.addEventListener('click', function(e) {
       var item = e.target.closest('[data-cp-name]');
@@ -723,9 +751,6 @@ function(instance, context) {
 
       row.chantiers.push({ name: name, type: 'chantier', origPool: foundPool });
       added.push(name);
-      var cpAtelierComment = (zone === 'transport' || zone === 'atelier')
-        && instance.data.atelierChantierCommentMap && instance.data.atelierChantierCommentMap[name];
-      if (cpAtelierComment) { row.commentaire = cpAtelierComment; }
       var cpResource = instance.data.resourceMap && instance.data.resourceMap[name];
       resetStates();
       if (cpResource) instance.publishState('tag_chantier', cpResource.obj);
@@ -733,10 +758,8 @@ function(instance, context) {
       instance.publishState('drop_zone',     zoneLabel(zone));
       instance.publishState('row_id_drop',   row.rowId || '');
       if (zone === 'atelier') instance.publishState('poste_atelier', row.poste || '');
-      if (cpAtelierComment) instance.publishState('commentaire', cpAtelierComment);
       instance.triggerEvent('tag_moved');
-      if (cpAtelierComment) instance.triggerEvent('add_commentaire');
-      renderList(searchEl.value);
+      renderList();
       render();
     });
 
@@ -747,12 +770,15 @@ function(instance, context) {
     function onKeydown(ev) { if (ev.key === 'Escape') closeChantierPicker(true); }
     function onScroll(ev) { if (ready && !picker.contains(ev.target)) closeChantierPicker(true); }
 
-    instance.data.pickerCleanup = function() {
+    instance.data.pickerCleanup = function(byUser) {
+      dzEl.classList.remove('ph-dz-active');
       document.removeEventListener('mousedown', onOutsideClick, true);
       document.removeEventListener('keydown', onKeydown);
       window.removeEventListener('scroll', onScroll, true);
       var wrap = instance.data.container.querySelector('.ph-wrap');
       if (wrap) wrap.removeEventListener('scroll', onScroll);
+      instance.data.pickerRenderList  = null;
+      instance.data.pickerSearchValue = '';
     };
 
     document.addEventListener('mousedown', onOutsideClick, true);
@@ -786,7 +812,7 @@ function(instance, context) {
       return d1.getTime() === d2.getTime();
     }
 
-    function tag(name, type, colorMain, colorBg, dragAttrs, removable, rmAttrs, extraStyle, noBadge) {
+    function tag(name, type, colorMain, colorBg, dragAttrs, removable, rmAttrs, extraStyle, noBadge, atelierComment) {
       var border = '1px solid ' + colorMain + '22';
       var rm = removable
         ? '<span class="ph-tag-rm" ' + rmAttrs + '>✕</span>'
@@ -796,8 +822,14 @@ function(instance, context) {
       var tt = (type === 'equipier' && instance.data.teletravailUsers && instance.data.teletravailUsers[name])
         ? '<span style="display:inline-block;padding:0 4px;border-radius:3px;background:#DBEAFE;border:1px solid #93C5FD;color:#1D4ED8;font-size:9px;font-weight:700;line-height:14px;margin-left:3px;flex-shrink:0;">TT</span>'
         : '';
+      var ar = (type === 'vehicule' && instance.data.archivedVehicules && instance.data.archivedVehicules[name])
+        ? '<span style="display:inline-block;padding:0 4px;border-radius:3px;background:#F1F5F9;border:1px solid #94A3B8;color:#64748B;font-size:9px;font-weight:700;line-height:14px;margin-left:3px;flex-shrink:0;">AR</span>'
+        : '';
+      var com = atelierComment
+        ? '<span class="ph-tag-com" data-tip="Commentaire · ' + atelierComment.replace(/"/g, '&quot;') + '">💬</span>'
+        : '';
       var style = 'color:' + colorMain + ';background:' + colorBg + ';border:' + border + ';' + (extraStyle || '');
-      return '<span class="ph-tag" style="' + style + '" ' + dragAttrs + '>' + badge + name + tt + rm + '</span>';
+      return '<span class="ph-tag" style="' + style + '" ' + dragAttrs + '>' + badge + name + tt + ar + com + rm + '</span>';
     }
 
     function makeDragAttrs(type, name, poolKey, zone, row, col, origPool) {
@@ -836,9 +868,15 @@ function(instance, context) {
             var tc = it.type === 'soustraitant' ? C.soustraitant : (C[it.type] || { main: colorMain, bg: colorBg });
             var da = makeDragAttrs(it.type, it.name, null, zone, rowId, col, it.origPool || null);
             var ra = makeRmAttrs(it.type, it.name, zone, rowId, col, it.origPool || null);
-            var indispoVeh = it.type === 'vehicule' && instance.data.indispoVehicules && instance.data.indispoVehicules[it.name];
-            var extra = indispoVeh ? 'color:#94A3B8;background:#F1F5F9;border:1px solid #94A3B8 !important;text-decoration:line-through;' : '';
-            var t = tag(it.name, it.type, tc.main, tc.bg, da, true, ra, extra);
+            var indispoVeh  = it.type === 'vehicule' && instance.data.indispoVehicules && instance.data.indispoVehicules[it.name];
+            var archivedVeh = it.type === 'vehicule' && instance.data.archivedVehicules && instance.data.archivedVehicules[it.name];
+            var extra = (indispoVeh || archivedVeh) ? 'color:#94A3B8;background:#F1F5F9;border:1px solid #94A3B8 !important;text-decoration:line-through;' : '';
+            var atelierCom = null;
+            if (it.type === 'chantier' && (zone === 'atelier' || zone === 'transport') && instance.data.atelierChantierCommentMap) {
+              var typeMap = instance.data.atelierChantierCommentMap[it.origPool];
+              atelierCom = typeMap ? (typeMap[it.name] || null) : null;
+            }
+            var t = tag(it.name, it.type, tc.main, tc.bg, da, true, ra, extra, false, atelierCom);
             if (it.type === 'chantier' && isDebutToday(it.name)) {
               t = t.replace('class="ph-tag"', 'class="ph-tag" style="border-color:#10B981 !important;background:#D1FAE5;color:#065F46;"')
                    .replace('>' + it.name + '<', '>🟢 ' + it.name + '<');
@@ -861,7 +899,7 @@ function(instance, context) {
         + '</div>';
     }
 
-    function sectionHeaderHtml(label, color, bg, zone, withCopy, count) {
+    function sectionHeaderHtml(label, color, bg, zone, withCopy, count, extraBtn) {
       var svgCopy = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
       var copyBtn = withCopy
         ? '<span class="ph-copy-zone-btn" data-cp-zone="' + zone + '" title="' + LABELS.copyZone + '" style="background:' + color + '22;color:' + color + ';">' + svgCopy + '</span>'
@@ -870,7 +908,7 @@ function(instance, context) {
         ? '<span style="font-size:11px;font-weight:700;background:' + color + '22;color:' + color + ';border-radius:10px;padding:1px 8px;">' + count + '</span>'
         : '';
       return '<div style="padding:8px 12px;background:' + bg + ';border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:800;color:' + color + ';display:flex;align-items:center;gap:6px;">'
-        + label + countBadge + '<span style="margin-left:auto;">' + copyBtn + '</span>' + '</div>';
+        + label + countBadge + '<span style="margin-left:auto;display:flex;align-items:center;gap:6px;">' + (extraBtn || '') + copyBtn + '</span>' + '</div>';
     }
 
     function addBtnHtml(zone) {
@@ -904,9 +942,10 @@ function(instance, context) {
         ? items.filter(function(n) { return n.toLowerCase().indexOf(searchVal.toLowerCase()) !== -1; })
         : items;
       var tagsHtml = filteredItems.map(function(n) {
-        var indispo = type === 'vehicule' && instance.data.indispoVehicules && instance.data.indispoVehicules[n];
+        var indispo  = type === 'vehicule' && instance.data.indispoVehicules  && instance.data.indispoVehicules[n];
+        var archived = type === 'vehicule' && instance.data.archivedVehicules && instance.data.archivedVehicules[n];
         var tagEl = poolTag(n, type, colorMain, colorBg, poolKey);
-        if (indispo) {
+        if (indispo || archived) {
           tagEl = tagEl.replace('class="ph-tag"', 'class="ph-tag" style="background:#F1F5F9;color:#94A3B8;border-color:#CBD5E1;text-decoration:line-through;"');
         } else if (type === 'chantier') {
           if (isDebutToday(n)) {
@@ -992,8 +1031,9 @@ function(instance, context) {
       var chCount = s.rows.chantier.filter(function(r) {
         return (r.chantiers&&r.chantiers.length)||(r.equipiers&&r.equipiers.length)||(r.vehicules&&r.vehicules.length)||r.commentaire;
       }).length;
+      var preRemplirBtn = '';
       return '<div class="ph-zone-card" style="border-left-color:' + C.chantier.main + ';">'
-        + sectionHeaderHtml(LABELS.zones.chantier, C.chantier.main, C.chantier.bg, 'chantier', true, chCount)
+        + sectionHeaderHtml(LABELS.zones.chantier, C.chantier.main, C.chantier.bg, 'chantier', true, chCount, preRemplirBtn)
         + zoneGridHtml(cols, rows)
         + addBtnHtml('chantier')
         + '</div>';
@@ -1166,10 +1206,11 @@ function(instance, context) {
 
     cnt.innerHTML = '<div class="' + ID + '"><div class="ph-wrap">'
 
-      // DATE HEADER — groupe centré [←][date][→][Aujourd'hui], today toujours rendu (visibility)
-      + '<div style="' + (s.isOff ? 'background:#FFF7ED;border:1px solid #FED7AA;' : 'background:#FFFFFF;border:1px solid #E2E8F0;') + 'border-radius:8px;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:6px;position:relative;">'
+      // DATE HEADER — aligné sur la zone gauche uniquement (pas le panneau pools)
+      + '<div style="display:flex;gap:8px;align-items:flex-start;position:sticky;top:0;z-index:10;">'
+      + '<div style="flex:1;min-width:0;' + (s.isOff ? 'background:#FFF7ED;border:1px solid #FED7AA;' : 'background:#FFFFFF;border:1px solid #E2E8F0;') + 'border-radius:8px;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">'
       + '<div class="ph-icon-btn ph-date-prev">&#x2039;</div>'
-      + '<span class="ph-date-label" style="font-size:14px;font-weight:700;color:#1E293B;margin:0 4px;">' + dateStr + '</span>'
+      + '<span class="ph-date-label" style="font-size:18px;font-weight:800;color:#1E293B;margin:0 4px;letter-spacing:-0.3px;">' + dateStr + '</span>'
       + (s.isOff ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;background:#FFEDD5;border:1px solid #FED7AA;font-size:10px;font-weight:700;letter-spacing:0.06em;color:#EA580C;text-transform:uppercase;">&#x26D4; Jour off</span>' : '')
       + '<div class="ph-icon-btn ph-date-next">&#x203A;</div>'
       + (function() {
@@ -1178,7 +1219,7 @@ function(instance, context) {
             var isToday = cur.getTime() === today.getTime();
             return '<div class="ph-today-btn" style="visibility:' + (isToday ? 'hidden' : 'visible') + ';margin-left:4px;">' + LABELS.today + '</div>';
           }())
-      + '<div style="position:absolute;right:12px;display:flex;gap:6px;">'
+      + '<div style="margin-left:auto;display:flex;gap:6px;flex-shrink:0;">'
       + '<div class="ph-icon-btn ph-copy-global" title="' + LABELS.copyGlobal + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div>'
       + (function() {
             var allClosed = ALL_POOL_KEYS.every(function(k) { return instance.data.collapsedPools[k]; });
@@ -1190,6 +1231,8 @@ function(instance, context) {
           }())
       + '<div class="ph-icon-btn ph-print" title="' + LABELS.print + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></div>'
       + '</div>'
+      + '</div>'
+      + '<div style="width:' + POOL_W + ';min-width:' + POOL_W + ';flex-shrink:0;"></div>'
       + '</div>'
 
       // ZONES
@@ -1249,16 +1292,42 @@ function(instance, context) {
     function dvTag(name, colorMain, colorBg) {
       return '<span class="ph-dv-tag" style="color:' + colorMain + ';background:' + colorBg + ';border-color:' + colorMain + '44;">' + esc(name) + multiSuffix(name) + '</span>';
     }
+    function dvTagWithComment(name, colorMain, colorBg, comment) {
+      if (!comment) return dvTag(name, colorMain, colorBg);
+      return '<span class="ph-dv-tag ph-dv-tag-com" style="color:' + colorMain + ';background:' + colorBg + ';border-color:' + colorMain + '44;">'
+        + '<span>' + esc(name) + multiSuffix(name) + '</span>'
+        + '<span class="ph-dv-tag-sub" style="color:#1E293B;"><span style="font-weight:700;">Commentaire · </span>' + esc(comment) + '</span>'
+        + '</span>';
+    }
 
     // ── Chantier : 1 card par ligne ──────────────────────────────
     var chRowsFiltered = s.rows.chantier.filter(function(r) {
       return (r.chantiers&&r.chantiers.length)||(r.equipiers&&r.equipiers.length)||(r.vehicules&&r.vehicules.length)||r.commentaire;
+    }).sort(function(a, b) {
+      var ordreMap = instance.data.vehiculeOrdreMap || {};
+      var vA = a.vehicules && a.vehicules[0] ? a.vehicules[0].name : null;
+      var vB = b.vehicules && b.vehicules[0] ? b.vehicules[0].name : null;
+      var pA = parseInt(vA, 10); var oA = vA ? (ordreMap[vA] !== undefined ? ordreMap[vA] : (isNaN(pA) ? Infinity : pA)) : Infinity;
+      var pB = parseInt(vB, 10); var oB = vB ? (ordreMap[vB] !== undefined ? ordreMap[vB] : (isNaN(pB) ? Infinity : pB)) : Infinity;
+      return oA - oB;
     });
     var TV_CHANTIER_COLOR = '#92400E';
     var TV_CHANTIER_BG    = '#FFFBEB';
 
     var chCards = chRowsFiltered.map(function(r) {
-      var chHd = (r.chantiers||[]).map(function(c) { return dvTag(c.name, TV_CHANTIER_COLOR, TV_CHANTIER_BG); }).join(' ');
+      var tvMap      = instance.data.chantierTvNameMap || {};
+      var parentMap  = instance.data.chantierParentMap || {};
+      var chHd = (r.chantiers||[]).map(function(c) {
+        var label      = tvMap[c.name] || c.name;
+        var parentName = parentMap[c.name];
+        if (parentName) {
+          return '<span style="display:inline-flex;flex-direction:column;background:' + TV_CHANTIER_BG + ';color:' + TV_CHANTIER_COLOR + ';border:1px solid ' + TV_CHANTIER_COLOR + '33;border-radius:4px;padding:2px 7px;line-height:1.3;">'
+            + '<span style="font-size:0.75em;opacity:0.7;font-weight:600;">' + esc(parentName) + '</span>'
+            + '<span>' + esc(label) + '</span>'
+            + '</span>';
+        }
+        return dvTag(label, TV_CHANTIER_COLOR, TV_CHANTIER_BG);
+      }).join(' ');
 
       var equipList    = r.equipiers || [];
       var equipiers    = equipList.filter(function(e) { return e.type !== 'soustraitant'; });
@@ -1266,24 +1335,14 @@ function(instance, context) {
 
       var vehName  = r.vehicules && r.vehicules[0] ? r.vehicules[0].name : null;
       var condName = r.conducteur ? r.conducteur.name : null;
-      var defaultCondEntry = vehName && instance.data.defaultConducteurMap ? instance.data.defaultConducteurMap[vehName] : null;
-      var defaultCondName = defaultCondEntry ? defaultCondEntry.name : null;
-      var ordreNum = vehName && instance.data.vehiculeOrdreMap && instance.data.vehiculeOrdreMap[vehName] !== undefined
-        ? instance.data.vehiculeOrdreMap[vehName]
-        : vehName;
+      var numInterne2 = vehName ? ((instance.data.vehiculeNumInterneMap || {})[vehName] || null) : null;
       var isLoc = vehName && instance.data.vehiculeLocMap && instance.data.vehiculeLocMap[vehName];
       var locPrefix = isLoc ? '(L) - ' : '';
       var vehDisplayHtml;
       if (vehName) {
-        if (defaultCondName) {
-          if (condName && condName !== defaultCondName) {
-            vehDisplayHtml = locPrefix + esc(ordreNum) + ' - <s style="color:#94A3B8;font-weight:400;">' + esc(defaultCondName) + '</s> (' + esc(condName) + ')';
-          } else {
-            vehDisplayHtml = locPrefix + esc(ordreNum) + ' - ' + esc(defaultCondName);
-          }
-        } else {
-          vehDisplayHtml = locPrefix + (condName ? esc(ordreNum) + ' - ' + esc(condName) : esc(ordreNum));
-        }
+        vehDisplayHtml = numInterne2
+          ? locPrefix + esc(numInterne2) + (condName ? ' - ' + esc(condName) : '')
+          : locPrefix + esc(vehName);
       }
       var vehSec = vehName
         ? '<div class="ph-tv-ch-card-sec ph-tv-ch-card-sec-veh">'
@@ -1315,7 +1374,7 @@ function(instance, context) {
 
     // ── Compact zones (transport, atelier, bureau) ───────────────
     function cptRow(r, zone) {
-      var chantiers   = (r.chantiers||[]).map(function(c) { return c.name; });
+      var chantierObjs = r.chantiers || [];
       var equipList   = r.equipiers || [];
       var equipiers   = equipList.filter(function(e) { return e.type !== 'soustraitant'; }).map(function(e) { return e.name; });
       var stts        = equipList.filter(function(e) { return e.type === 'soustraitant'; }).map(function(e) { return e.name; });
@@ -1324,25 +1383,25 @@ function(instance, context) {
 
       var parts = [];
       if (poste)            parts.push('<span class="ph-tv-cpt-poste">' + esc(poste) + '</span>');
-      if (chantiers.length) parts.push(chantiers.map(function(n) { return dvTag(n, TV_CHANTIER_COLOR, TV_CHANTIER_BG); }).join(' '));
+      var tvMap2 = instance.data.chantierTvNameMap || {};
+      if (chantierObjs.length) {
+        var atelComMapTV = (zone === 'atelier' || zone === 'transport') ? (instance.data.atelierChantierCommentMap || {}) : {};
+        parts.push(chantierObjs.map(function(c) {
+          var posteToPool = instance.data.posteToPool || {};
+          var typeKey = zone === 'atelier' ? (posteToPool[poste] || poste) : (c.origPool || '');
+          var typeMapTV = atelComMapTV[typeKey];
+          var com = typeMapTV ? (typeMapTV[c.name] || null) : null;
+          return dvTagWithComment(tvMap2[c.name] || c.name, TV_CHANTIER_COLOR, TV_CHANTIER_BG, com);
+        }).join(' '));
+      }
       if (vehName) {
-        var condNameCpt      = r.conducteur ? r.conducteur.name : null;
-        var defCondEntryCpt  = instance.data.defaultConducteurMap ? instance.data.defaultConducteurMap[vehName] : null;
-        var defCondNameCpt   = defCondEntryCpt ? defCondEntryCpt.name : null;
-        var ordreNumCpt      = instance.data.vehiculeOrdreMap && instance.data.vehiculeOrdreMap[vehName] !== undefined
-          ? instance.data.vehiculeOrdreMap[vehName] : vehName;
-        var isLocCpt    = instance.data.vehiculeLocMap && instance.data.vehiculeLocMap[vehName];
+        var condNameCpt  = r.conducteur ? r.conducteur.name : null;
+        var numIntCpt    = (instance.data.vehiculeNumInterneMap || {})[vehName] || null;
+        var isLocCpt     = instance.data.vehiculeLocMap && instance.data.vehiculeLocMap[vehName];
         var locPrefixCpt = isLocCpt ? '(L) - ' : '';
-        var vehLabelCpt;
-        if (defCondNameCpt) {
-          if (condNameCpt && condNameCpt !== defCondNameCpt) {
-            vehLabelCpt = locPrefixCpt + esc(ordreNumCpt) + ' - <s style="color:#94A3B8;font-weight:400;">' + esc(defCondNameCpt) + '</s> (' + esc(condNameCpt) + ')';
-          } else {
-            vehLabelCpt = locPrefixCpt + esc(ordreNumCpt) + ' - ' + esc(defCondNameCpt);
-          }
-        } else {
-          vehLabelCpt = locPrefixCpt + (condNameCpt ? esc(ordreNumCpt) + ' - ' + esc(condNameCpt) : esc(ordreNumCpt));
-        }
+        var vehLabelCpt  = numIntCpt
+          ? locPrefixCpt + esc(numIntCpt) + (condNameCpt ? ' - ' + esc(condNameCpt) : '')
+          : locPrefixCpt + esc(vehName);
         parts.push('<span class="ph-tv-cpt-veh">' + EMOJIS.vehicule + ' ' + vehLabelCpt + '</span>');
       }
       if (equipiers.length) parts.push(equipiers.map(function(n) { return dvTag(n, C.equipier.main, C.equipier.bg); }).join(' '));
@@ -1583,6 +1642,36 @@ function(instance, context) {
       if (!el.contains(ev.target)) closeCopyPopover();
     };
     instance.data.popEsc = function(ev) { if (ev.key === 'Escape') closeCopyPopover(); };
+    instance.data.popScroll = function() { closeCopyPopover(); };
+    setTimeout(function() {
+      document.addEventListener('mousedown', instance.data.popOutside);
+      document.addEventListener('keydown', instance.data.popEsc);
+      instance.data.container.addEventListener('scroll', instance.data.popScroll, true);
+    }, 0);
+  }
+
+  function openPreRemplirConfirm(anchor, onConfirm) {
+    closeCopyPopover();
+    var el = document.createElement('div');
+    el.className = 'ph-copy-popover';
+    el.innerHTML = '<div class="ph-copy-popover-title">⚠️ Pré-remplir depuis devant chantier</div>'
+      + '<div class="ph-copy-popover-body">Cette action va écraser le planning chantier existant pour cette date. Continuer ?</div>'
+      + '<div class="ph-copy-popover-btns">'
+      + '<button class="ph-copy-popover-cancel">Annuler</button>'
+      + '<button class="ph-copy-popover-ok">Oui, écraser</button>'
+      + '</div>';
+    document.body.appendChild(el);
+    positionEl(el, anchor);
+    instance.data.activePopover = el;
+
+    el.querySelector('.ph-copy-popover-ok').addEventListener('click', function() {
+      closeCopyPopover();
+      onConfirm();
+    });
+    el.querySelector('.ph-copy-popover-cancel').addEventListener('click', closeCopyPopover);
+
+    instance.data.popOutside = function(ev) { if (!el.contains(ev.target) && ev.target !== anchor) closeCopyPopover(); };
+    instance.data.popEsc    = function(ev) { if (ev.key === 'Escape') closeCopyPopover(); };
     instance.data.popScroll = function() { closeCopyPopover(); };
     setTimeout(function() {
       document.addEventListener('mousedown', instance.data.popOutside);
@@ -1859,10 +1948,7 @@ function(instance, context) {
     instance.publishState('drop_zone',   zoneLabel(targetZone));
     instance.publishState('row_id_source', drag.isDuplicate ? '' : (srcRowForId ? (srcRowForId.rowId || '') : srcAbsRowId));
     instance.publishState('row_id_drop',   tgtRowForId ? (tgtRowForId.rowId || '') : tgtAbsRowId);
-    var dropAtelierComment = addResult && addResult.atelierComment;
-    if (dropAtelierComment) instance.publishState('commentaire', dropAtelierComment);
     instance.triggerEvent('tag_moved');
-    if (dropAtelierComment) instance.triggerEvent('add_commentaire');
   });
 
   // ---- Show Loader ----
@@ -1943,11 +2029,14 @@ function(instance, context) {
 
     var C = { chantier:'#3B82F6', transport:'#F59E0B', atelier:'#8B5CF6', bureau:'#10B981' };
     instance.data.container.innerHTML = '<div class="' + ID + '"><div class="ph-wrap">'
-      + '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:6px;position:relative;">'
+      + '<div style="display:flex;gap:8px;align-items:flex-start;position:sticky;top:0;z-index:10;">'
+      + '<div style="flex:1;min-width:0;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">'
       + '<div class="ph-icon-btn ph-date-prev">&#x2039;</div>'
-      + '<span style="font-size:14px;font-weight:700;color:#1E293B;white-space:nowrap;margin:0 4px;">' + dateStr + '</span>'
+      + '<span style="font-size:18px;font-weight:800;color:#1E293B;white-space:nowrap;margin:0 4px;letter-spacing:-0.3px;">' + dateStr + '</span>'
       + '<div class="ph-icon-btn ph-date-next">&#x203A;</div>'
       + '<div class="ph-today-btn" style="visibility:hidden;margin-left:4px;">' + LABELS.today + '</div>'
+      + '</div>'
+      + '<div style="width:' + POOL_W + ';min-width:' + POOL_W + ';flex-shrink:0;"></div>'
       + '</div>'
       + '<div class="ph-zone-row">' + skZone(C.chantier, 3)   + '</div>'
       + '<div class="ph-zone-row">' + skZone(C.transport, 2)  + '</div>'
@@ -1964,6 +2053,33 @@ function(instance, context) {
     render();
     var newInp = cnt.querySelector('.ph-pool-search[data-pool-search="' + inp.dataset.poolSearch + '"]');
     if (newInp) { newInp.focus(); var l = newInp.value.length; newInp.setSelectionRange(l, l); }
+  });
+
+  // ---- Tooltip ----
+  var phTooltip = document.getElementById('ph-tooltip');
+  if (!phTooltip) {
+    phTooltip = document.createElement('div');
+    phTooltip.id = 'ph-tooltip';
+    document.body.appendChild(phTooltip);
+  }
+  cnt.addEventListener('mouseover', function(e) {
+    var el = e.target.closest('.ph-tag-com[data-tip]');
+    if (!el) return;
+    var tip = el.getAttribute('data-tip');
+    if (!tip) return;
+    phTooltip.textContent = tip;
+    phTooltip.style.display = 'block';
+    var r = el.getBoundingClientRect();
+    var tw = phTooltip.offsetWidth;
+    var left = r.right - tw;
+    if (left < 8) left = 8;
+    var top = r.top - phTooltip.offsetHeight - 6;
+    if (top < 8) top = r.bottom + 6;
+    phTooltip.style.left = left + 'px';
+    phTooltip.style.top  = top  + 'px';
+  });
+  cnt.addEventListener('mouseout', function(e) {
+    if (e.target.closest('.ph-tag-com[data-tip]')) phTooltip.style.display = 'none';
   });
 
   // ---- Pool Toggle ----
@@ -2141,15 +2257,17 @@ function(instance, context) {
         + ' <span class="ph-del-confirm-no">Annuler</span>'
         + ' <span class="ph-del-confirm-yes" data-del-zone="' + delBtn.dataset.delZone + '" data-del-row="' + delBtn.dataset.delRow + '">Oui</span>';
       delCell.appendChild(confirm);
-      // Ferme au clic en dehors
+      // Ferme au clic en dehors + Entrée = confirmer, Échap = annuler
       setTimeout(function() {
         function onOutside(ev) {
-          if (!confirm.contains(ev.target)) {
-            confirm.remove();
-            document.removeEventListener('mousedown', onOutside, true);
-          }
+          if (!confirm.contains(ev.target)) { confirm.remove(); document.removeEventListener('mousedown', onOutside, true); document.removeEventListener('keydown', onKey); }
+        }
+        function onKey(ev) {
+          if (ev.key === 'Enter') { confirm.querySelector('.ph-del-confirm-yes') && confirm.querySelector('.ph-del-confirm-yes').click(); document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onOutside, true); }
+          if (ev.key === 'Escape') { confirm.remove(); document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onOutside, true); }
         }
         document.addEventListener('mousedown', onOutside, true);
+        document.addEventListener('keydown', onKey);
       }, 0);
       return;
     }
@@ -2189,6 +2307,16 @@ function(instance, context) {
           if (row) row.commentaire = prev;
           render();
         }
+      });
+      return;
+    }
+
+    // Pré-remplir chantier
+    var preRemplirBtn = e.target.closest('.ph-pre-remplir-btn');
+    if (preRemplirBtn) {
+      openPreRemplirConfirm(preRemplirBtn, function() {
+        instance.publishState('selected_date', new Date(st.date));
+        instance.triggerEvent('pre_remplir');
       });
       return;
     }
@@ -2412,7 +2540,8 @@ function(instance, context) {
     } else if (drag.type === 'soustraitant') {
       if (st.pools.soustraitants.indexOf(drag.name) === -1) st.pools.soustraitants.push(drag.name);
     } else if (drag.type === 'vehicule') {
-      if (st.pools.vehicules.indexOf(drag.name) === -1) st.pools.vehicules.push(drag.name);
+      var isAr = instance.data.archivedVehicules && instance.data.archivedVehicules[drag.name];
+      if (!isAr && st.pools.vehicules.indexOf(drag.name) === -1) st.pools.vehicules.push(drag.name);
     } else if (drag.type === 'chantier' && drag.origPool) {
       var pool = st.pools.chantiers[drag.origPool];
       if (pool && pool.indexOf(drag.name) === -1) pool.push(drag.name);
@@ -2433,9 +2562,6 @@ function(instance, context) {
       var exists = row.chantiers.some(function(c) { return c.name === drag.name; });
       if (!exists) {
         row.chantiers.push({ name: drag.name, type: 'chantier', origPool: drag.poolKey || drag.origPool || null });
-        var atelierComment = (targetZone === 'transport' || targetZone === 'atelier')
-          && instance.data.atelierChantierCommentMap && instance.data.atelierChantierCommentMap[drag.name];
-        if (atelierComment) { row.commentaire = atelierComment; return { atelierComment: atelierComment }; }
       }
 
     } else if (targetCol === 'equipier') {
@@ -2518,24 +2644,18 @@ function(instance, context) {
 
     function vehCondPrint(vehName, conducteur) {
       if (!vehName) return '—';
-      var ordreMap   = instance.data.vehiculeOrdreMap || {};
-      var defCondMap = instance.data.defaultConducteurMap || {};
-      var locMap     = instance.data.vehiculeLocMap || {};
-      var ordreNum   = ordreMap[vehName] !== undefined ? ordreMap[vehName] : vehName;
-      var defCond    = defCondMap[vehName] ? defCondMap[vehName].name : null;
-      var condName   = conducteur ? conducteur.name : null;
-      var locPfx     = locMap[vehName] ? '(L) - ' : '';
-      var label;
-      if (defCond) {
-        if (condName && condName !== defCond) {
-          label = locPfx + ordreNum + ' - <s style="color:#94A3B8;">' + defCond + '</s> (' + condName + ')';
-        } else {
-          label = locPfx + ordreNum + ' - ' + defCond;
-        }
-      } else {
-        label = locPfx + (condName ? ordreNum + ' - ' + condName : String(ordreNum));
-      }
-      return '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;border:1px solid ' + PRINT_COLORS.vehicule + ';color:' + PRINT_COLORS.vehicule + ';margin:1px;">' + label + '</span>';
+      var locMap      = instance.data.vehiculeLocMap || {};
+      var numInt      = (instance.data.vehiculeNumInterneMap || {})[vehName] || null;
+      var condName    = conducteur ? conducteur.name : null;
+      var locPfx      = locMap[vehName] ? '(L) - ' : '';
+      var label       = numInt
+        ? locPfx + numInt + (condName ? ' - ' + condName : '')
+        : locPfx + vehName;
+      var isIndispo   = !!(instance.data.indispoVehicules  && instance.data.indispoVehicules[vehName]);
+      var isArchived  = !!(instance.data.archivedVehicules && instance.data.archivedVehicules[vehName]);
+      var badge       = isArchived ? ' <span style="font-size:9px;font-weight:700;color:#64748B;background:#F1F5F9;border:1px solid #94A3B8;border-radius:3px;padding:0 3px;">AR</span>' : '';
+      var extraStyle  = (isIndispo || isArchived) ? 'text-decoration:line-through;color:#94A3B8;border-color:#94A3B8;' : '';
+      return '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;border:1px solid ' + PRINT_COLORS.vehicule + ';color:' + PRINT_COLORS.vehicule + ';margin:1px;' + extraStyle + '">' + label + badge + '</span>';
     }
 
     function rowsHtml(rows, zoneName) {
