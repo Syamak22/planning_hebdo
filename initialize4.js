@@ -805,11 +805,22 @@ function(instance, context) {
     var countMap = buildCountMap(s);
 
     function isDebutToday(name) {
+      var chefs = instance.data.chantierChefMap && instance.data.chantierChefMap[name];
+      if (chefs && chefs.length) {
+        return chefs.some(function(c) { return c.isStartingToday; });
+      }
+      // Fallback sur chantierDebutMap si pas de chefs
       var d = instance.data.chantierDebutMap && instance.data.chantierDebutMap[name];
       if (!d) return false;
       var d1 = new Date(d); d1.setHours(0,0,0,0);
       var d2 = new Date(instance.data.state.date); d2.setHours(0,0,0,0);
       return d1.getTime() === d2.getTime();
+    }
+
+    function chefTooltip(name) {
+      var chefs = instance.data.chantierChefMap && instance.data.chantierChefMap[name];
+      if (!chefs || !chefs.length) return null;
+      return chefs.map(function(c) { return c.label; }).join('\n');
     }
 
     function tag(name, type, colorMain, colorBg, dragAttrs, removable, rmAttrs, extraStyle, noBadge, atelierComment) {
@@ -877,9 +888,15 @@ function(instance, context) {
               atelierCom = typeMap ? (typeMap[it.name] || null) : null;
             }
             var t = tag(it.name, it.type, tc.main, tc.bg, da, true, ra, extra, false, atelierCom);
-            if (it.type === 'chantier' && isDebutToday(it.name)) {
-              t = t.replace('class="ph-tag"', 'class="ph-tag" style="border-color:#10B981 !important;background:#D1FAE5;color:#065F46;"')
-                   .replace('>' + it.name + '<', '>🟢 ' + it.name + '<');
+            if (it.type === 'chantier') {
+              var chefTip = chefTooltip(it.name);
+              if (chefTip) {
+                t = t.replace('class="ph-tag"', 'class="ph-tag" data-chef-tip="' + chefTip.replace(/"/g, '&quot;').replace(/\n/g, '&#10;') + '"');
+              }
+              if (isDebutToday(it.name)) {
+                t = t.replace('class="ph-tag"', 'class="ph-tag" style="border-color:#10B981 !important;background:#D1FAE5;color:#065F46;"')
+                     .replace('>' + it.name + '<', '>🟢 ' + it.name + '<');
+              }
             }
             return t;
           }).join('')
@@ -948,6 +965,10 @@ function(instance, context) {
         if (indispo || archived) {
           tagEl = tagEl.replace('class="ph-tag"', 'class="ph-tag" style="background:#F1F5F9;color:#94A3B8;border-color:#CBD5E1;text-decoration:line-through;"');
         } else if (type === 'chantier') {
+          var chefTipPool = chefTooltip(n);
+          if (chefTipPool) {
+            tagEl = tagEl.replace('class="ph-tag"', 'class="ph-tag" data-chef-tip="' + chefTipPool.replace(/"/g, '&quot;').replace(/\n/g, '&#10;') + '"');
+          }
           if (isDebutToday(n)) {
             tagEl = tagEl.replace(
               'class="ph-tag"',
@@ -2035,6 +2056,11 @@ function(instance, context) {
       + '<span style="font-size:18px;font-weight:800;color:#1E293B;white-space:nowrap;margin:0 4px;letter-spacing:-0.3px;">' + dateStr + '</span>'
       + '<div class="ph-icon-btn ph-date-next">&#x203A;</div>'
       + '<div class="ph-today-btn" style="visibility:hidden;margin-left:4px;">' + LABELS.today + '</div>'
+      + '<div style="margin-left:auto;display:flex;gap:6px;flex-shrink:0;">'
+      + '<div class="ph-icon-btn" style="visibility:hidden;"></div>'
+      + '<div class="ph-icon-btn" style="visibility:hidden;"></div>'
+      + '<div class="ph-icon-btn" style="visibility:hidden;"></div>'
+      + '</div>'
       + '</div>'
       + '<div style="width:' + POOL_W + ';min-width:' + POOL_W + ';flex-shrink:0;"></div>'
       + '</div>'
@@ -2063,11 +2089,12 @@ function(instance, context) {
     document.body.appendChild(phTooltip);
   }
   cnt.addEventListener('mouseover', function(e) {
-    var el = e.target.closest('.ph-tag-com[data-tip]');
+    var el = e.target.closest('.ph-tag-com[data-tip]') || e.target.closest('.ph-tag[data-chef-tip]');
     if (!el) return;
-    var tip = el.getAttribute('data-tip');
+    var tip = el.getAttribute('data-tip') || el.getAttribute('data-chef-tip');
     if (!tip) return;
-    phTooltip.textContent = tip;
+    phTooltip.style.whiteSpace = 'pre-wrap';
+    phTooltip.textContent = tip.replace(/&#10;/g, '\n');
     phTooltip.style.display = 'block';
     var r = el.getBoundingClientRect();
     var tw = phTooltip.offsetWidth;
@@ -2079,7 +2106,7 @@ function(instance, context) {
     phTooltip.style.top  = top  + 'px';
   });
   cnt.addEventListener('mouseout', function(e) {
-    if (e.target.closest('.ph-tag-com[data-tip]')) phTooltip.style.display = 'none';
+    if (e.target.closest('.ph-tag-com[data-tip]') || e.target.closest('.ph-tag[data-chef-tip]')) phTooltip.style.display = 'none';
   });
 
   // ---- Pool Toggle ----
@@ -2748,7 +2775,8 @@ function(instance, context) {
   instance.data.indispoVehicules = {};
   instance.data.absenceMotifMap  = {};
   instance.data.absenceRowIdMap  = {};
-  instance.data.chantierDebutMap = {}; // { nomChantier: Date } — chantiers qui démarrent ce jour
+  instance.data.chantierDebutMap = {};
+  instance.data.chantierChefMap  = {}; // { nomChantier: [{ name, dateDebut, dateFin, isStartingToday, label }] }
   instance.data.vehiculeOrdreMap = {};
   instance.data.equipierSearch = '';
   var ALL_POOL_KEYS = ['equipiers', 'soustraitants', 'vehicules', 'chantier', 'bureau_eq'].concat(instance.data.atelierTypes || []);

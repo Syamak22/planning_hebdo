@@ -24,6 +24,11 @@ function(instance, properties, context) {
   var fieldPlaConducteur    = properties.field_pla_conducteur;
   var fieldPlaConducteurSst = properties.field_pla_conducteur_sst;
   var fieldChParent         = properties.field_ch_parent_chantier;
+  var fieldChefParentId     = properties.field_chef_parent_chantier_id;
+  var fieldChefDateDebut    = properties.field_chef_date_debut;
+  var fieldChefDateFin      = properties.field_chef_date_fin;
+  var fieldChefUserIdChv    = properties.field_chef_user_id_chv;
+  var fieldChefUserIdStt    = properties.field_chef_user_id_stt;
   var fieldVehLoc           = properties.field_veh_loc;
   var fieldVehIsArchived    = properties.field_veh_is_archived;
   var fieldVehNumInterne    = properties.field_num_interne;
@@ -104,6 +109,7 @@ function(instance, properties, context) {
     var posteItems      = readList(props.table_poste_atelier);
     var planItems       = readList(props.table_pla);
     var typePlanItems   = readList(props.table_type_planning);
+    var chefItems       = readList(props.table_chef);
 
     // ----------------------------------------------------------
     // HASH CHECK
@@ -123,6 +129,13 @@ function(instance, properties, context) {
       var d = c.get(fieldChDateDebut); return d ? d.getTime() : '';
     }).join(',') : '');
     hash += '|chJ:' + chJour.map(function(c) { return getField(c, fieldChName) || ''; }).join(',');
+    hash += '|chef:' + chefItems.map(function(ch) {
+      var idChv = fieldChefUserIdChv ? (ch.get(fieldChefUserIdChv) || '') : '';
+      var idStt = fieldChefUserIdStt ? (ch.get(fieldChefUserIdStt) || '') : '';
+      var deb   = fieldChefDateDebut ? (ch.get(fieldChefDateDebut) ? ch.get(fieldChefDateDebut).getTime() : '') : '';
+      var fin   = fieldChefDateFin   ? (ch.get(fieldChefDateFin)   ? ch.get(fieldChefDateFin).getTime()   : '') : '';
+      return (idChv || idStt) + ':' + deb + ':' + fin;
+    }).join(',');
     hash += '|atelierTrans:' + atelierTransportTypeItems.map(function(t) {
       return t && typeof t.get === 'function' ? (t.get('display') || '') : '';
     }).join(',');
@@ -367,6 +380,81 @@ function(instance, properties, context) {
       chantierList = allChJour.concat(atelierAllChantiers)
         .filter(function(n, i, arr) { return arr.indexOf(n) === i; });
     }
+
+    // ----------------------------------------------------------
+    // CHEFS DE CHANTIER
+    // JOIN en mémoire : field_chef_user_id_chv → userIdMap, field_chef_user_id_stt → sttIdMap
+    // ----------------------------------------------------------
+    var userIdMap = {};
+    userItems.forEach(function(u) {
+      var id   = u.get('_id');
+      var name = getField(u, fieldUserName);
+      if (id && name) userIdMap[id] = name;
+    });
+    var sttIdMap = {};
+    sttItems.forEach(function(s) {
+      var id   = s.get('_id');
+      var name = getField(s, fieldSttName);
+      if (id && name) sttIdMap[id] = name;
+    });
+
+    var months3 = ['jan.','fév.','mar.','avr.','mai','juin','juil.','août','sep.','oct.','nov.','déc.'];
+    function fmtDate(d) {
+      if (!d) return '?';
+      return d.getDate() + ' ' + months3[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    // JOIN chantier ID → nom (depuis chAll déjà chargé)
+    var chantierIdToNameMap = {};
+    chAll.forEach(function(c) {
+      var id   = c.get('_id');
+      var name = getField(c, fieldChName);
+      if (id && name) chantierIdToNameMap[id] = name;
+    });
+
+    var chantierChefMap = {}; // { chantierName → [{ name, dateDebut, dateFin, isStartingToday }] }
+    var currentDateTs = st.date ? st.date.getTime() : null;
+
+    chefItems.forEach(function(ch) {
+      if (!ch || typeof ch.get !== 'function') return;
+
+      // Résoudre le nom du chef via JOIN
+      var chefName = null;
+      if (fieldChefUserIdChv) {
+        var idChv = ch.get(fieldChefUserIdChv);
+        if (idChv) chefName = userIdMap[idChv] || null;
+      }
+      if (!chefName && fieldChefUserIdStt) {
+        var idStt = ch.get(fieldChefUserIdStt);
+        if (idStt) chefName = sttIdMap[idStt] || null;
+      }
+      if (!chefName) return;
+
+      // Chantier parent via JOIN (Text ID → nom, pas de N+1)
+      var chParentId   = fieldChefParentId ? ch.get(fieldChefParentId) : null;
+      var chParentName = chParentId ? (chantierIdToNameMap[chParentId] || null) : null;
+      if (!chParentName) return;
+
+      var dateDebut = fieldChefDateDebut ? ch.get(fieldChefDateDebut) : null;
+      var dateFin   = fieldChefDateFin   ? ch.get(fieldChefDateFin)   : null;
+
+      var isStartingToday = false;
+      if (currentDateTs && dateDebut) {
+        var debTs = new Date(dateDebut); debTs.setHours(0,0,0,0);
+        isStartingToday = debTs.getTime() === currentDateTs;
+      }
+
+      if (!chantierChefMap[chParentName]) chantierChefMap[chParentName] = [];
+      chantierChefMap[chParentName].push({
+        name:            chefName,
+        dateDebut:       dateDebut,
+        dateFin:         dateFin,
+        isStartingToday: isStartingToday,
+        label:           chefName + ' · ' + fmtDate(dateDebut) + ' → ' + fmtDate(dateFin),
+      });
+    });
+
+    instance.data.chantierChefMap  = chantierChefMap;
 
     instance.data.chantierList     = chantierList;
     instance.data.chSearchResults  = chantierList;
