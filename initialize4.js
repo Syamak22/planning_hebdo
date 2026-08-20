@@ -489,12 +489,18 @@ function(instance, context) {
       if (!row.equipiers) row.equipiers = [];
       row.equipiers.push({ name: name, type: type, origPool: pool });
       addedNames.push(name);
+      // Appliquer poste par défaut si la ligne atelier n'en a pas
+      if (zone === 'atelier' && !row.poste) {
+        var defPostes = instance.data.postes || [];
+        if (defPostes.length) row.poste = defPostes[0];
+      }
       var res = instance.data.resourceMap && instance.data.resourceMap[name];
       resetStates();
       if (res) instance.publishState('tag_' + res.type, res.obj);
       instance.publishState('source_zone', 'POOL');
       instance.publishState('drop_zone',   zoneLabel(zone));
       instance.publishState('row_id_drop', row.rowId || '');
+      if (zone === 'atelier' && row.poste) instance.publishState('poste_atelier', row.poste);
       instance.triggerEvent('tag_moved');
       renderList(searchEl.value);
       render();
@@ -1961,9 +1967,16 @@ function(instance, context) {
       var motifObj = instance.data.absenceMotifMap && instance.data.absenceMotifMap[targetRow];
       if (motifObj) instance.publishState('motif_absence', motifObj);
     }
-    if (targetZone === 'atelier' && targetCol === 'chantiers') {
+    if (targetZone === 'atelier') {
       var atelRowDrop = tgtRowForId || getRow(st, 'atelier', targetRow);
-      if (atelRowDrop && atelRowDrop.poste) instance.publishState('poste_atelier', atelRowDrop.poste);
+      if (atelRowDrop) {
+        // Appliquer le poste par défaut si la ligne n'en a pas encore
+        if (!atelRowDrop.poste) {
+          var defaultPostes = instance.data.postes || [];
+          if (defaultPostes.length) atelRowDrop.poste = defaultPostes[0];
+        }
+        if (atelRowDrop.poste) instance.publishState('poste_atelier', atelRowDrop.poste);
+      }
     }
     instance.publishState('source_zone', (!drag.isDuplicate && drag.zone) ? zoneLabel(drag.zone) : null);
     instance.publishState('drop_zone',   zoneLabel(targetZone));
