@@ -35,6 +35,12 @@ function(instance, properties, context) {
   var fieldPlaAtelierType   = properties.field_pla_atelier_type;
   var fieldPlaAtelierCha    = properties.field_pla_atelier_cha;
   var fieldPlaAtelierCom    = properties.field_pla_atelier_commentaire;
+  var fieldAbsUserId        = properties.field_abs_user_id;
+  var fieldAbsMotif         = properties.field_abs_motif;
+  var fieldAbsSousMotif     = properties.field_abs_sous_motif;
+  var fieldAbsCreneau       = properties.field_abs_creneau;
+  var fieldAbsCommentaire   = properties.field_abs_commentaire;
+  var creneauMappingRaw     = properties.mapping_os_creneau;
   var posteTypeMappingRaw   = properties.poste_type_mapping;
   instance.data.isDisplay = !!properties.is_display;
   instance.data.isOff     = !!properties.jour_off;
@@ -106,7 +112,8 @@ function(instance, properties, context) {
     var atelierTransportTypeItems = readList(props.table_type_atelier_transport);
     var chAll        = readList(props.table_ch);
     var absenceItems    = readList(props.table_absence);
-    var posteItems      = readList(props.table_poste_atelier);
+    var absRecItems     = readList(props.table_abs);
+    var posteItems     = readList(props.table_poste_atelier);
     var planItems       = readList(props.table_pla);
     var typePlanItems   = readList(props.table_type_planning);
     var chefItems       = readList(props.table_chef);
@@ -124,6 +131,29 @@ function(instance, properties, context) {
     hash += '|v:' + vehItems.map(function(v) { return getField(v, fieldVehName) || ''; }).join(',');
     hash += '|vi:' + vehIndispo.map(function(v) { return v.get('_id'); }).join(',');
     hash += '|abs:' + absenceItems.length;
+    // Lit un champ qui peut être un option set (display), un objet Bubble (_id) ou un texte
+    function readAbsField(r, field, preferId) {
+      if (!field) return '';
+      var v = r.get(field);
+      if (v === null || v === undefined) return '';
+      if (typeof v === 'object' && typeof v.get === 'function') {
+        return (preferId ? v.get('_id') : v.get('display')) || v.get('display') || v.get('_id') || '';
+      }
+      return String(v);
+    }
+    var absRecs = absRecItems.map(function(r) {
+      return {
+        userId:      readAbsField(r, fieldAbsUserId, true),
+        motif:       readAbsField(r, fieldAbsMotif),
+        sousMotif:   readAbsField(r, fieldAbsSousMotif),
+        creneau:     readAbsField(r, fieldAbsCreneau),
+        commentaire: readAbsField(r, fieldAbsCommentaire)
+      };
+    });
+    hash += '|crmap:' + (creneauMappingRaw || '');
+    hash += '|absrec:'+ absRecs.map(function(r) {
+      return [r.userId, r.motif, r.sousMotif, r.creneau, r.commentaire].join('~');
+    }).join(',');
     hash += '|pos:' + posteItems.length;
     hash += '|chDeb:' + (fieldChDateDebut ? chAll.map(function(c) {
       var d = c.get(fieldChDateDebut); return d ? d.getTime() : '';
@@ -469,6 +499,39 @@ function(instance, properties, context) {
     var rows     = { chantier:[], transport:[], atelier:[], bureau:[] };
     var absences = {};
 
+    var absInfo = {};
+
+    // Mapping créneau : JSON { "display OS": "texte à afficher" } (sans mapping → display brut)
+    // Tolère les ";" à la place des "," entre entrées et une virgule finale
+    var creneauMap = null;
+    if (creneauMappingRaw && creneauMappingRaw.trim()) {
+      var jsonTxt = creneauMappingRaw
+        .replace(/;(?=\s*["}])/g, ',')
+        .replace(/,(?=\s*})/g, '');
+      try {
+        creneauMap = JSON.parse(jsonTxt);
+      } catch (e) {
+        console.warn('[planning_hebdo] mapping_os_creneau : JSON invalide', e.message);
+      }
+    }
+    function creneauLabel(display) {
+      if (!creneauMap) return display;
+      return creneauMap[display] || '';
+    }
+
+    // Fusionne les records de table_abs d'un user pour un motif (plusieurs records possibles le même jour)
+    function buildAbsInfo(userId, motif) {
+      if (!userId) return null;
+      var recs = absRecs.filter(function(r) { return r.userId === userId && r.motif === motif; });
+      if (!recs.length) return null;
+      function uniq(arr) { return arr.filter(function(v, i) { return v && arr.indexOf(v) === i; }); }
+      return {
+        sousMotif:   uniq(recs.map(function(r) { return r.sousMotif; })).join(' / '),
+        creneau:     uniq(recs.map(function(r) { return creneauLabel(r.creneau); })).join(' + '),
+        commentaire: uniq(recs.map(function(r) { return r.commentaire; })).join(' / ')
+      };
+    }
+
     var absenceMotifMap  = {};
     var absenceRowIdMap  = {};
     absenceItems.forEach(function(a) {
@@ -496,7 +559,7 @@ function(instance, properties, context) {
       var equipiers  = [];
       equipeList.forEach(function(u) {
         var name = getField(u, fieldUserName);
-        if (name) { equipiers.push({ name: name, type: 'equipier' }); usedEquipiers[name] = true; }
+        if (name) { equipiers.push({ name: name, type: 'equipier', id: u.get('_id') || '' }); usedEquipiers[name] = true; }
       });
 
       // Sous-traitants
@@ -554,6 +617,11 @@ function(instance, properties, context) {
           if (rowId && !absenceRowIdMap[motifStr]) absenceRowIdMap[motifStr] = rowId;
           equipiers.forEach(function(eq) {
             if (absences[motifStr].indexOf(eq.name) === -1) absences[motifStr].push(eq.name);
+            var info = buildAbsInfo(eq.id, motifStr);
+            if (info) {
+              if (!absInfo[motifStr]) absInfo[motifStr] = {};
+              absInfo[motifStr][eq.name] = info;
+            }
           });
         }
 
@@ -677,7 +745,8 @@ function(instance, properties, context) {
 
     st.rows     = rows;
     st.absences = absences;
-    st.isOff    = instance.data.isOff;
+    st.absInfo  = absInfo;
+    st.isOff   = instance.data.isOff;
     // Fusionner avec les IDs générés localement (pour ne pas perdre un ID créé avant la synchro BDD)
     var existingAbsRowIds = instance.data.absenceRowIdMap || {};
     Object.keys(existingAbsRowIds).forEach(function(m) {

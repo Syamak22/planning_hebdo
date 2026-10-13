@@ -167,6 +167,8 @@ function(instance, context) {
     '.' + ID + ' .ph-tag-rm { display:inline-flex; align-items:center; justify-content:center; width:12px; height:12px; border-radius:50%; background:rgba(0,0,0,0.12); font-size:9px; line-height:1; cursor:pointer; flex-shrink:0; }',
     '.' + ID + ' .ph-tag-rm:hover { background:rgba(0,0,0,0.28); }',
     '.' + ID + ' .ph-tag-com { display:inline-flex; align-items:center; font-size:10px; opacity:0.75; flex-shrink:0; cursor:default; }',
+    '.' + ID + ' .ph-tag-sub { font-size:10px; font-weight:400; opacity:0.8; }',
+    '.' + ID + ' .ph-tag-cr, .' + ID + ' .ph-dv-tag-cr { display:inline-block; padding:0 4px; border-radius:3px; background:#FFFFFF; border:1px solid currentColor; font-size:9px; font-weight:700; line-height:14px; flex-shrink:0; }',
     '#ph-tooltip { position:fixed; background:#1E293B; color:#F8FAFC; font-size:11px; font-weight:400; line-height:1.4; white-space:normal; word-break:normal; width:220px; padding:6px 9px; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.25); pointer-events:none; z-index:99999; display:none; }',
     '.' + ID + ' .ph-drop { min-height:26px; padding:3px 4px; display:flex; flex-wrap:wrap; align-items:center; gap:2px; border-radius:0; margin:0; transition:outline 0.1s,background 0.1s; border-bottom:' + SEP_ROW + '; }',
     '.' + ID + ' .ph-drop.dv-ok  { outline:2px dashed var(--dv-color,#3B82F6); outline-offset:-2px; background:rgba(59,130,246,0.06); }',
@@ -829,7 +831,7 @@ function(instance, context) {
       return chefs.map(function(c) { return c.label; }).join('\n');
     }
 
-    function tag(name, type, colorMain, colorBg, dragAttrs, removable, rmAttrs, extraStyle, noBadge, atelierComment) {
+    function tag(name, type, colorMain, colorBg, dragAttrs, removable, rmAttrs, extraStyle, noBadge, atelierComment, extraHtml) {
       var border = '1px solid ' + colorMain + '22';
       var rm = removable
         ? '<span class="ph-tag-rm" ' + rmAttrs + '>✕</span>'
@@ -846,7 +848,7 @@ function(instance, context) {
         ? '<span class="ph-tag-com" data-tip="Commentaire · ' + atelierComment.replace(/"/g, '&quot;') + '">💬</span>'
         : '';
       var style = 'color:' + colorMain + ';background:' + colorBg + ';border:' + border + ';' + (extraStyle || '');
-      return '<span class="ph-tag" style="' + style + '" ' + dragAttrs + '>' + badge + name + tt + ar + com + rm + '</span>';
+      return '<span class="ph-tag" style="' + style + '" ' + dragAttrs + '>' + badge + name + (extraHtml || '') + tt + ar + com + rm + '</span>';
     }
 
     function makeDragAttrs(type, name, poolKey, zone, row, col, origPool) {
@@ -893,7 +895,13 @@ function(instance, context) {
               var typeMap = instance.data.atelierChantierCommentMap[it.origPool];
               atelierCom = typeMap ? (typeMap[it.name] || null) : null;
             }
-            var t = tag(it.name, it.type, tc.main, tc.bg, da, true, ra, extra, false, atelierCom);
+            var absExtra = '';
+            if (it.absInfo) {
+              if (it.absInfo.sousMotif) absExtra += '<span class="ph-tag-sub">· ' + escHtml(it.absInfo.sousMotif) + '</span>';
+              if (it.absInfo.creneau)   absExtra += '<span class="ph-tag-cr">' + escHtml(it.absInfo.creneau) + '</span>';
+              if (it.absInfo.commentaire) atelierCom = escHtml(it.absInfo.commentaire);
+            }
+            var t = tag(it.name, it.type, tc.main, tc.bg, da, true, ra, extra, false, atelierCom, absExtra);
             if (it.type === 'chantier') {
               var chefTip = chefTooltip(it.name);
               if (chefTip) {
@@ -1162,7 +1170,8 @@ function(instance, context) {
       var dataRow = '<div style="display:contents;">'
         + motifs.map(function(m) {
             var eqs = s.absences[m] || [];
-            var items = eqs.map(function(n) { return { name: n, type: 'equipier' }; });
+            var infoMap = (s.absInfo && s.absInfo[m]) || {};
+            var items = eqs.map(function(n) { return { name: n, type: 'equipier', absInfo: infoMap[n] || null }; });
             return dropZoneHtml(items, C.absence.main, C.absence.bg, '—', 0, C.absence.main, 'absence', 'equipier', m);
           }).join('')
         + '</div>';
@@ -1327,6 +1336,16 @@ function(instance, context) {
         + '</span>';
     }
 
+    function dvAbsTag(motif, name) {
+      var info = s.absInfo && s.absInfo[motif] && s.absInfo[motif][name];
+      if (!info || (!info.sousMotif && !info.creneau && !info.commentaire)) return dvTag(name, C.absence.main, C.absence.bg);
+      return '<span class="ph-dv-tag ph-dv-tag-com" style="color:' + C.absence.main + ';background:' + C.absence.bg + ';border-color:' + C.absence.main + '44;">'
+        + '<span>' + esc(name) + multiSuffix(name) + (info.creneau ? ' <span class="ph-dv-tag-cr">' + esc(info.creneau) + '</span>' : '') + '</span>'
+        + (info.sousMotif ? '<span class="ph-dv-tag-sub">' + esc(info.sousMotif) + '</span>' : '')
+        + (info.commentaire ? '<span class="ph-dv-tag-sub" style="color:#1E293B;"><span style="font-weight:700;">Commentaire · </span>' + esc(info.commentaire) + '</span>' : '')
+        + '</span>';
+    }
+
     // ── Chantier : 1 card par ligne ──────────────────────────────
     var chRowsFiltered = s.rows.chantier.filter(function(r) {
       return (r.chantiers&&r.chantiers.length)||(r.equipiers&&r.equipiers.length)||(r.vehicules&&r.vehicules.length)||r.commentaire;
@@ -1461,7 +1480,7 @@ function(instance, context) {
         + abMotifs.map(function(m) {
             return '<div class="ph-tv-abs-col">'
               + '<div class="ph-tv-abs-motif" style="color:' + C.absence.main + ';">' + esc(m) + '</div>'
-              + '<div class="ph-tv-abs-tags" style="display:flex;flex-wrap:wrap;gap:4px;">' + (s.absences[m]||[]).map(function(n) { return dvTag(n, C.absence.main, C.absence.bg); }).join('') + '</div>'
+              + '<div class="ph-tv-abs-tags" style="display:flex;flex-wrap:wrap;gap:4px;">' + (s.absences[m]||[]).map(function(n) { return dvAbsTag(m, n); }).join('') + '</div>'
               + '</div>';
           }).join('')
         + '</div></div>';
@@ -2741,7 +2760,18 @@ function(instance, context) {
     var th = function(label) { return '<th style="padding:5px 8px;text-align:left;border-bottom:2px solid #E2E8F0;font-weight:600;color:#475569;word-break:break-word;">' + label + '</th>'; };
 
     var absHtml = Object.keys(st.absences).map(function(m) {
-      var names = (st.absences[m]||[]).join(', ') || '—';
+      var infoMap = (st.absInfo && st.absInfo[m]) || {};
+      function pEsc(v) { return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+      var persons = (st.absences[m]||[]).map(function(n) {
+        var info = infoMap[n];
+        if (!info) return n;
+        return n
+          + (info.sousMotif ? ' · ' + pEsc(info.sousMotif) : '')
+          + (info.creneau ? ' <span style="font-size:9px;font-weight:700;border:1px solid #EF4444;color:#EF4444;border-radius:3px;padding:0 3px;">' + pEsc(info.creneau) + '</span>' : '')
+          + (info.commentaire ? ' <span style="font-size:10px;color:#64748B;font-style:italic;">💬 ' + pEsc(info.commentaire) + '</span>' : '');
+      });
+      var hasInfo = (st.absences[m]||[]).some(function(n) { return !!infoMap[n]; });
+      var names = persons.join(hasInfo ? '<br>' : ', ') || '—';
       return '<tr><td style="padding:4px 8px;font-weight:600;">' + m + '</td><td style="padding:4px 8px;">' + names + '</td></tr>';
     }).join('');
 
