@@ -41,6 +41,7 @@ function(instance, properties, context) {
   var fieldAbsCreneau       = properties.field_abs_creneau;
   var fieldAbsCommentaire   = properties.field_abs_commentaire;
   var creneauMappingRaw     = properties.mapping_os_creneau;
+  var zonesMappingRaw       = properties.mapping_os_zones;
   var posteTypeMappingRaw   = properties.poste_type_mapping;
   instance.data.isDisplay = !!properties.is_display;
   instance.data.isOff     = !!properties.jour_off;
@@ -78,6 +79,21 @@ function(instance, properties, context) {
   function getDisplay(obj) {
     if (!obj || typeof obj.get !== 'function') return null;
     return obj.get('display') || null;
+  }
+
+  // Parse un mapping JSON saisi dans une property Bubble.
+  // Tolère les ";" à la place des "," entre entrées et une virgule finale. Retourne null si vide/invalide.
+  function parseMappingJson(raw, propName) {
+    if (!raw || !raw.trim()) return null;
+    var jsonTxt = raw
+      .replace(/;(?=\s*["}])/g, ',')
+      .replace(/,(?=\s*})/g, '');
+    try {
+      return JSON.parse(jsonTxt);
+    } catch (e) {
+      console.warn('[planning_hebdo] ' + propName + ' : JSON invalide', e.message);
+      return null;
+    }
   }
 
   function getField(obj, field) {
@@ -151,6 +167,7 @@ function(instance, properties, context) {
       };
     });
     hash += '|crmap:' + (creneauMappingRaw || '');
+    hash += '|zmap:' + (zonesMappingRaw || '');
     hash += '|absrec:'+ absRecs.map(function(r) {
       return [r.userId, r.motif, r.sousMotif, r.creneau, r.commentaire].join('~');
     }).join(',');
@@ -237,13 +254,21 @@ function(instance, properties, context) {
     var postes = posteItems.map(getDisplay).filter(Boolean);
     if (postes.length) instance.data.postes = postes;
 
+    // Mapping zones : JSON { "display OS": "clé interne" } (chantier, transport, atelier, bureau, absence)
+    // Display absent du mapping (ou pas de mapping) → display en minuscules
+    var zonesMap = parseMappingJson(zonesMappingRaw, 'mapping_os_zones');
+    function zoneKey(display) {
+      if (!display) return null;
+      var mapped = zonesMap && zonesMap[display];
+      return (mapped ? String(mapped).trim() : display).toLowerCase();
+    }
+
     var zoneTypeMap = {};
     typePlanItems.forEach(function(os) {
       var d = getDisplay(os);
-      if (d) zoneTypeMap[d.toLowerCase()] = os;
+      if (d) zoneTypeMap[zoneKey(d)] = os;
     });
     instance.data.zoneTypeMap = zoneTypeMap;
-
     // ----------------------------------------------------------
     // RESOURCE MAP  (nom → {obj, type})
     // ----------------------------------------------------------
@@ -502,18 +527,7 @@ function(instance, properties, context) {
     var absInfo = {};
 
     // Mapping créneau : JSON { "display OS": "texte à afficher" } (sans mapping → display brut)
-    // Tolère les ";" à la place des "," entre entrées et une virgule finale
-    var creneauMap = null;
-    if (creneauMappingRaw && creneauMappingRaw.trim()) {
-      var jsonTxt = creneauMappingRaw
-        .replace(/;(?=\s*["}])/g, ',')
-        .replace(/,(?=\s*})/g, '');
-      try {
-        creneauMap = JSON.parse(jsonTxt);
-      } catch (e) {
-        console.warn('[planning_hebdo] mapping_os_creneau : JSON invalide', e.message);
-      }
-    }
+    var creneauMap = parseMappingJson(creneauMappingRaw, 'mapping_os_creneau');
     function creneauLabel(display) {
       if (!creneauMap) return display;
       return creneauMap[display] || '';
@@ -602,8 +616,7 @@ function(instance, properties, context) {
           }
         }
       }
-      var typeNorm = typeStr.toLowerCase();
-
+      var typeNorm = zoneKey(typeStr);
       // Fallback conducteur par défaut du véhicule (field_conduc1) — seulement pour chantier/transport
       if (!conducteur && vehName && defaultConducteurMap[vehName] && (typeNorm === 'chantier' || typeNorm === 'transport')) {
         conducteur = defaultConducteurMap[vehName];

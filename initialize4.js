@@ -212,6 +212,8 @@ function(instance, context) {
     '.' + ID + ' .ph-today-btn:hover { background:#DBEAFE; }',
     '.' + ID + ' .ph-copy-zone-btn { width:22px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:4px; cursor:pointer; flex-shrink:0; }',
     '.' + ID + ' .ph-copy-zone-btn:hover { opacity:0.75; }',
+    '.' + ID + ' .ph-go-module { width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:4px; cursor:pointer; flex-shrink:0; }',
+    '.' + ID + ' .ph-go-module:hover { opacity:0.75; }',
     '.' + ID + ' .ph-tag.insert-before { border-left:2px solid #3B82F6 !important; margin-left:3px; }',
     '.' + ID + ' .ph-tag.insert-after  { border-right:2px solid #3B82F6 !important; margin-right:3px; }',
     '.' + ID + ' .ph-drop.ph-dz-active { outline:2px solid #3B82F6; outline-offset:-2px; background:rgba(59,130,246,0.06); }',
@@ -938,8 +940,12 @@ function(instance, context) {
       var countBadge = (count !== undefined && count !== null)
         ? '<span style="font-size:11px;font-weight:700;background:' + color + '22;color:' + color + ';border-radius:10px;padding:1px 8px;">' + count + '</span>'
         : '';
+      var svgGo = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>';
+      var goBtn = zone !== 'bureau'
+        ? '<span class="ph-go-module" data-go-zone="' + zone + '" title="Accéder au module" style="background:' + color + '22;color:' + color + ';">' + svgGo + '</span>'
+        : '';
       return '<div style="padding:8px 12px;background:' + bg + ';border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:800;color:' + color + ';display:flex;align-items:center;gap:6px;">'
-        + label + countBadge + '<span style="margin-left:auto;display:flex;align-items:center;gap:6px;">' + (extraBtn || '') + copyBtn + '</span>' + '</div>';
+        + label + countBadge + goBtn + '<span style="margin-left:auto;display:flex;align-items:center;gap:6px;">' + (extraBtn || '') + copyBtn + '</span>' + '</div>';
     }
 
     function addBtnHtml(zone) {
@@ -1338,11 +1344,10 @@ function(instance, context) {
 
     function dvAbsTag(motif, name) {
       var info = s.absInfo && s.absInfo[motif] && s.absInfo[motif][name];
-      if (!info || (!info.sousMotif && !info.creneau && !info.commentaire)) return dvTag(name, C.absence.main, C.absence.bg);
+      if (!info || (!info.sousMotif && !info.creneau)) return dvTag(name, C.absence.main, C.absence.bg);
       return '<span class="ph-dv-tag ph-dv-tag-com" style="color:' + C.absence.main + ';background:' + C.absence.bg + ';border-color:' + C.absence.main + '44;">'
         + '<span>' + esc(name) + multiSuffix(name) + (info.creneau ? ' <span class="ph-dv-tag-cr">' + esc(info.creneau) + '</span>' : '') + '</span>'
         + (info.sousMotif ? '<span class="ph-dv-tag-sub">' + esc(info.sousMotif) + '</span>' : '')
-        + (info.commentaire ? '<span class="ph-dv-tag-sub" style="color:#1E293B;"><span style="font-weight:700;">Commentaire · </span>' + esc(info.commentaire) + '</span>' : '')
         + '</span>';
     }
 
@@ -2163,6 +2168,15 @@ function(instance, context) {
       return;
     }
 
+    // Raccourci vers la page du module
+    var goModule = e.target.closest('[data-go-zone]');
+    if (goModule) {
+      resetStates();
+      instance.publishState('raccourci_module', zoneLabel(goModule.dataset.goZone));
+      instance.triggerEvent('go_to_module');
+      return;
+    }
+
     // Clic sur zone chantier → ouvrir le picker
     var dzChantier = e.target.closest('[data-dz-col="chantiers"]');
     if (dzChantier && !e.target.closest('[data-rm]') && !e.target.closest('[data-dt]')) {
@@ -2538,6 +2552,7 @@ function(instance, context) {
     instance.publishState('motif_absence', null);
     instance.publishState('poste_atelier', null);
     instance.publishState('commentaire',   null);
+    instance.publishState('raccourci_module', null);
   }
 
   // Crée les lignes vides jusqu'à l'index cible (lignes fantômes → lignes réelles)
